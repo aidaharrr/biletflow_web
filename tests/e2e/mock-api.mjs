@@ -1,7 +1,8 @@
-// This fixture is used only by Playwright; the production app has no demo-data fallback.
+// Playwright fixture only. Production admin sample data requires explicit Demo mode.
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
 import { createOrganizerFixture } from "./mock-organizer.mjs";
+import { createAdminFixture } from "./mock-admin.mjs";
 
 const paidId = "11111111-1111-4111-8111-111111111111";
 const freeId = "22222222-2222-4222-8222-222222222222";
@@ -19,6 +20,7 @@ let orders;
 let tickets;
 let control;
 let organizer;
+let admin;
 
 function reset() {
   user.email = "attendee@example.com";
@@ -88,6 +90,7 @@ function reset() {
   orders = [];
   tickets = [];
   control = {};
+  admin = createAdminFixture({ events, control, user });
   organizer = createOrganizerFixture({
     events,
     orders,
@@ -142,6 +145,11 @@ const server = createServer(async (request, response) => {
       user.full_name = "Demo Organizer";
       user.roles = ["attendee", "organizer"];
     }
+    if (body.email === "admin@example.com") {
+      user.email = body.email;
+      user.full_name = "Demo Admin";
+      user.roles = ["attendee", "platform_admin"];
+    }
     return send({
       access_token: "fixture-token",
       expires_in: 1800,
@@ -158,6 +166,7 @@ const server = createServer(async (request, response) => {
   )
     return send({ detail: "Not authenticated" }, 401);
   if (path === "/users/me") return send(user);
+  if (admin({ path, url, request, response, body, send })) return;
   if (organizer({ path, url, request, response, body, send })) return;
   if (/^\/events\/[^/]+$/.test(path) && request.method === "PATCH") {
     const event = events.find((event) => event.id === path.split("/")[2]);

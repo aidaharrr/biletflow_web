@@ -25,7 +25,19 @@ import type {
   SupportMessage,
   SupportStatus,
   SupportCaseWrite,
+  AdminApi,
+  AdminDashboardData,
+  AdminEvent,
+  AdminOperations,
+  AdminQueryOptions,
+  AdminRevocationResult,
+  AdminSupportCase,
+  AdminSuspensionResult,
+  AdminUser,
+  AdminUserSuspensionResult,
+  OrganizerApplication,
 } from "@/types/api";
+import { isActiveEvent } from "./admin";
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
@@ -401,6 +413,12 @@ export function getTicketPdf(
 
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
+    if (
+      ["ADMIN_ROUTE_NOT_IMPLEMENTED", "EVENT_SUSPENSION_INCOMPLETE"].includes(
+        error.code,
+      )
+    )
+      return error.message;
     if (error.status === 401)
       return "Your session has expired. Please sign in again.";
     if (error.status === 403) return "You do not have access to this page.";
@@ -418,6 +436,235 @@ export function errorMessage(error: unknown): string {
   return error instanceof Error
     ? error.message
     : "Something went wrong. Please try again.";
+}
+
+function adminMissingRoute(error: unknown, feature: string): never {
+  if (error instanceof ApiError && [404, 405, 501].includes(error.status))
+    throw new ApiError(
+      `${feature} is not connected to the live backend yet. Choose Demo data to preview this workflow.`,
+      501,
+      "ADMIN_ROUTE_NOT_IMPLEMENTED",
+    );
+  throw error;
+}
+export function getUsers(
+  options: ApiRequestOptions = {},
+  client = getAttendeeClient(),
+) {
+  return collection<AdminUser>("/admin/users", options, client);
+}
+export function getAdminEvents(
+  options: ApiRequestOptions = {},
+  client = getAttendeeClient(),
+) {
+  return collection<AdminEvent>("/admin/events", options, client);
+}
+export async function getOrganizerApplications(
+  options: ApiRequestOptions = {},
+  client = getAttendeeClient(),
+) {
+  try {
+    return await collection<OrganizerApplication>(
+      "/admin/organizer-applications",
+      options,
+      client,
+    );
+  } catch (error) {
+    return adminMissingRoute(error, "Organizer application review");
+  }
+}
+export async function getPendingOrganizers(
+  options: ApiRequestOptions = {},
+  client = getAttendeeClient(),
+) {
+  return (
+    await getOrganizerApplications(
+      { ...options, params: { ...options.params, status: "pending" } },
+      client,
+    )
+  ).filter((application) => application.status === "pending");
+}
+export async function approveOrganizer(
+  id: string,
+  key: string,
+  client = getAttendeeClient(),
+) {
+  try {
+    return await client.post<OrganizerApplication>(
+      `/admin/organizer-applications/${encodeURIComponent(id)}/approve`,
+      undefined,
+      { idempotencyKey: key },
+    );
+  } catch (error) {
+    return adminMissingRoute(error, "Organizer approval");
+  }
+}
+export async function rejectOrganizer(
+  id: string,
+  reason: string,
+  key: string,
+  client = getAttendeeClient(),
+) {
+  try {
+    return await client.post<OrganizerApplication>(
+      `/admin/organizer-applications/${encodeURIComponent(id)}/reject`,
+      { reason },
+      { idempotencyKey: key },
+    );
+  } catch (error) {
+    return adminMissingRoute(error, "Organizer rejection");
+  }
+}
+export function suspendEvent(
+  id: string,
+  reason: string,
+  key: string,
+  client = getAttendeeClient(),
+) {
+  // The gateway combines authorized unpublication and paid-sales suspension.
+  return client.post<AdminSuspensionResult>(
+    `/admin/events/${encodeURIComponent(id)}/suspend`,
+    { reason },
+    { idempotencyKey: key },
+  );
+}
+export function suspendUser(
+  id: string,
+  reason: string,
+  key: string,
+  client = getAttendeeClient(),
+) {
+  return client.post<AdminUserSuspensionResult>(
+    `/admin/users/${encodeURIComponent(id)}/suspend`,
+    { reason },
+    { idempotencyKey: key },
+  );
+}
+export async function revokeUserAccess(
+  id: string,
+  reason: string,
+  key: string,
+  client = getAttendeeClient(),
+) {
+  try {
+    return await client.post<AdminRevocationResult>(
+      `/admin/users/${encodeURIComponent(id)}/revoke-access`,
+      { reason },
+      { idempotencyKey: key },
+    );
+  } catch (error) {
+    return adminMissingRoute(error, "Session revocation");
+  }
+}
+export async function getAdminEscalations(
+  options: ApiRequestOptions = {},
+  client = getAttendeeClient(),
+) {
+  try {
+    const cases = await collection<AdminSupportCase>(
+      "/admin/support/cases",
+      { ...options, params: { ...options.params, escalated: true } },
+      client,
+    );
+    if (cases.some((item) => typeof item.escalated !== "boolean"))
+      throw new ApiError(
+        "Support escalation metadata is missing from the response.",
+        200,
+        "INVALID_RESPONSE",
+      );
+    return cases.filter((item) => item.escalated && item.status !== "resolved");
+  } catch (error) {
+    return adminMissingRoute(error, "Escalated support reporting");
+  }
+}
+export async function getAdminDashboard(
+  options: ApiRequestOptions = {},
+  client = getAttendeeClient(),
+): Promise<AdminDashboardData> {
+  const [operations, events, applications, cases] = await Promise.allSettled([
+    client.get<AdminOperations>("/admin/reports/operations", options),
+    getAdminEvents(options, client),
+    getPendingOrganizers(options, client),
+    getAdminEscalations(options, client),
+  ]);
+  const asOf = new Date();
+  const issues: AdminDashboardData["issues"] = [];
+  const count = (value: unknown) =>
+    typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+      ? value
+      : null;
+  const total =
+    operations.status === "fulfilled" ? count(operations.value.users) : null;
+  if (total === null)
+    issues.push({
+      metric: "Registered users",
+      message:
+        operations.status === "rejected"
+          ? errorMessage(operations.reason)
+          : "Platform total unavailable.",
+    });
+  const eventTotal =
+    operations.status === "fulfilled" ? count(operations.value.events) : null;
+  const complete =
+    events.status === "fulfilled" &&
+    eventTotal !== null &&
+    eventTotal === events.value.length;
+  if (!complete)
+    issues.push({
+      metric: "Active events",
+      message:
+        events.status === "rejected"
+          ? errorMessage(events.reason)
+          : "The live event list does not cover the full platform total. A complete count is unavailable.",
+    });
+  if (applications.status === "rejected")
+    issues.push({
+      metric: "Organizer applications",
+      message: errorMessage(applications.reason),
+    });
+  if (cases.status === "rejected")
+    issues.push({
+      metric: "Escalated support",
+      message: errorMessage(cases.reason),
+    });
+  return {
+    total_registered_users: total,
+    active_events:
+      complete && events.status === "fulfilled"
+        ? events.value.filter((event) => isActiveEvent(event, asOf.getTime()))
+            .length
+        : null,
+    pending_organizer_applications:
+      applications.status === "fulfilled" ? applications.value.length : null,
+    escalated_support_cases:
+      cases.status === "fulfilled" ? cases.value.length : null,
+    escalated_cases: cases.status === "fulfilled" ? cases.value : null,
+    issues,
+    as_of: asOf.toISOString(),
+  };
+}
+/** Factory keeps admin pages identical in explicit live and demo modes. */
+export function createLiveAdminApi(client?: ApiClient): AdminApi {
+  const options = (query: AdminQueryOptions = {}): ApiRequestOptions => ({
+    signal: query.signal,
+    params: query.query ? { q: query.query } : {},
+  });
+  return {
+    getDashboard: (query) => getAdminDashboard(options(query), client),
+    getUsers: (query) => getUsers(options(query), client),
+    getEvents: (query) => getAdminEvents(options(query), client),
+    getOrganizerApplications: (query) =>
+      getOrganizerApplications(options(query), client),
+    getPendingOrganizers: (query) =>
+      getPendingOrganizers(options(query), client),
+    approveOrganizer: (id, key) => approveOrganizer(id, key, client),
+    rejectOrganizer: (id, reason, key) =>
+      rejectOrganizer(id, reason, key, client),
+    suspendEvent: (id, reason, key) => suspendEvent(id, reason, key, client),
+    suspendUser: (id, reason, key) => suspendUser(id, reason, key, client),
+    revokeUserAccess: (id, reason, key) =>
+      revokeUserAccess(id, reason, key, client),
+  };
 }
 
 export function listOrganizerEvents(

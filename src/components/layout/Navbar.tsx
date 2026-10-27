@@ -50,6 +50,15 @@ export function Navbar() {
               Organizer portal
             </Link>
           )}
+          {user?.roles.includes("platform_admin") && (
+            <Link
+              href="/admin/dashboard"
+              aria-current={pathname.startsWith("/admin") ? "page" : undefined}
+              className="py-sm font-medium text-primary"
+            >
+              Admin Panel
+            </Link>
+          )}
         </div>
         <div className="flex items-center gap-md text-label">
           {user?.roles.includes("organizer") && (

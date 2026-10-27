@@ -394,3 +394,114 @@ export interface SupportCaseWrite {
   order_id?: UUID;
   ticket_id?: UUID;
 }
+
+export type AdminMode = "live" | "demo";
+export type OrganizerApplicationStatus = "pending" | "approved" | "rejected";
+/** Proposed admin review DTO. Only sandbox references and masked payout details. */
+export interface OrganizerApplication {
+  id: UUID;
+  user_id: UUID;
+  applicant_name: string;
+  email: string;
+  organization_name: string | null;
+  contact_phone: string | null;
+  requested_event_id: UUID | null;
+  requested_event_title: string | null;
+  profile: OrganizerProfile;
+  sandbox_identity_reference: string | null;
+  sandbox_payout_reference: string | null;
+  terms_accepted: boolean;
+  activation_fee_paid: boolean;
+  status: OrganizerApplicationStatus;
+  rejection_reason: string | null;
+  reviewed_at: ISODateTime | null;
+  created_at: ISODateTime;
+}
+export interface AdminUser extends User {
+  is_active: boolean;
+  active_sessions?: number;
+  last_access_revoked_at?: ISODateTime | null;
+  suspension_reason?: string | null;
+}
+export interface AdminEvent extends Event {
+  moderation_status?: "active" | "suspended";
+  suspension_reason?: string | null;
+  suspended_at?: ISODateTime | null;
+}
+/** Escalation is explicit metadata, not inferred from a case's ordinary status. */
+export interface AdminSupportCase extends SupportCase {
+  escalated: boolean;
+  requester_name?: string;
+  escalation_reason?: string;
+}
+export interface AdminOperations {
+  users: number;
+  events: number;
+  orders: number;
+  tickets: number;
+  currency: Currency;
+  financial_data_is_simulated: boolean;
+}
+export interface AdminMetricIssue {
+  metric: string;
+  message: string;
+}
+export interface AdminDashboardData {
+  total_registered_users: number | null;
+  active_events: number | null;
+  pending_organizer_applications: number | null;
+  escalated_support_cases: number | null;
+  escalated_cases: AdminSupportCase[] | null;
+  issues: AdminMetricIssue[];
+  as_of: ISODateTime;
+}
+export interface AdminSuspensionResult {
+  status: "suspended";
+  event_id: UUID;
+  event_hidden: true;
+  paid_sales_stopped: true;
+}
+export interface AdminUserSuspensionResult {
+  status: "suspended";
+}
+export interface AdminRevocationResult {
+  status: "revoked";
+  user_id: UUID;
+  revoked_sessions: number;
+}
+export interface AdminQueryOptions {
+  signal?: AbortSignal;
+  query?: string;
+}
+export interface AdminApi {
+  getDashboard: (options?: AdminQueryOptions) => Promise<AdminDashboardData>;
+  getOrganizerApplications: (
+    options?: AdminQueryOptions,
+  ) => Promise<OrganizerApplication[]>;
+  getPendingOrganizers: (
+    options?: AdminQueryOptions,
+  ) => Promise<OrganizerApplication[]>;
+  approveOrganizer: (id: UUID, key: string) => Promise<OrganizerApplication>;
+  rejectOrganizer: (
+    id: UUID,
+    reason: string,
+    key: string,
+  ) => Promise<OrganizerApplication>;
+  getEvents: (options?: AdminQueryOptions) => Promise<AdminEvent[]>;
+  suspendEvent: (
+    id: UUID,
+    reason: string,
+    key: string,
+  ) => Promise<AdminSuspensionResult>;
+  getUsers: (options?: AdminQueryOptions) => Promise<AdminUser[]>;
+  suspendUser: (
+    id: UUID,
+    reason: string,
+    key: string,
+  ) => Promise<AdminUserSuspensionResult>;
+  revokeUserAccess: (
+    id: UUID,
+    reason: string,
+    key: string,
+  ) => Promise<AdminRevocationResult>;
+}

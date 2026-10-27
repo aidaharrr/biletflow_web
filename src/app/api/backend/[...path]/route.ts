@@ -3,6 +3,7 @@ import {
   gatewayError,
   rejectCrossOrigin,
 } from "@/lib/server-api";
+import { getAdminAccess } from "@/lib/server-admin";
 
 async function proxy(
   request: Request,
@@ -20,7 +21,15 @@ async function proxy(
     PUT: /^organizer-profile(?:\/payout-account)?$/,
     PATCH: /^(events\/[^/]+|support\/cases\/[^/]+\/status)$/,
   };
-  if (!allowed[request.method]?.test(route))
+  const adminRead =
+    /^admin\/(users|events|organizer-applications|support\/cases|reports\/operations)$/;
+  const adminWrite =
+    /^admin\/(organizer-applications\/[^/]+\/(approve|reject)|events\/[^/]+\/suspend|users\/[^/]+\/(suspend|revoke-access))$/;
+  const adminAllowed =
+    request.method === "GET"
+      ? adminRead.test(route)
+      : request.method === "POST" && adminWrite.test(route);
+  if (!allowed[request.method]?.test(route) && !adminAllowed)
     return Response.json(
       {
         error: {
@@ -32,6 +41,28 @@ async function proxy(
       { status: 404 },
     );
   try {
+    if (route.startsWith("admin/")) {
+      const access = await getAdminAccess();
+      if (!access.user)
+        return Response.json(
+          {
+            error: {
+              code:
+                access.status === 401
+                  ? "UNAUTHENTICATED"
+                  : access.status === 403
+                    ? "FORBIDDEN"
+                    : "AUTH_CHECK_FAILED",
+              message:
+                access.status === 502
+                  ? "Unable to verify administrator access. Please try again."
+                  : "An active Admin account is required.",
+              details: {},
+            },
+          },
+          { status: access.status, headers: { "Cache-Control": "no-store" } },
+        );
+    }
     const headers = new Headers();
     for (const name of [
       "content-type",
@@ -42,14 +73,88 @@ async function proxy(
       const value = request.headers.get(name);
       if (value) headers.set(name, value);
     }
+    const body = ["POST", "PUT", "PATCH"].includes(request.method)
+      ? await request.text()
+      : undefined;
+    const suspendingEvent =
+      request.method === "POST" &&
+      /^admin\/events\/[^/]+\/suspend$/.test(route);
+    if (suspendingEvent) {
+      let reason: unknown;
+      try {
+        reason = JSON.parse(body ?? "{}").reason;
+      } catch {
+        reason = null;
+      }
+      if (
+        typeof reason !== "string" ||
+        reason.trim().length < 3 ||
+        reason.trim().length > 500
+      )
+        return Response.json(
+          {
+            error: {
+              code: "VALIDATION_ERROR",
+              message: "Enter a suspension reason from 3 to 500 characters.",
+              details: {},
+            },
+          },
+          { status: 422 },
+        );
+      // Unpublish first: this hides the event and blocks free as well as paid checkout.
+      const hidden = await backendFetch(
+        `events/${encodeURIComponent(path[2])}/unpublish`,
+        { method: "POST", headers },
+      );
+      if (!hidden.ok)
+        return new Response(hidden.body, {
+          status: hidden.status,
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+          },
+        });
+      const hiddenEvent = await hidden.json();
+      if (hiddenEvent.status !== "draft")
+        return Response.json(
+          {
+            error: {
+              code: "EVENT_HIDE_NOT_CONFIRMED",
+              message:
+                "Event hiding was not confirmed by the backend. Refresh the event before retrying.",
+              details: {},
+            },
+          },
+          { status: 502 },
+        );
+      let response: Response;
+      try {
+        response = await backendFetch(
+          `${path.map(encodeURIComponent).join("/")}`,
+          { method: "POST", headers, body },
+        );
+      } catch {
+        return partialSuspension();
+      }
+      if (!response.ok) return partialSuspension();
+      const outcome = await response.json().catch(() => null);
+      if (outcome?.status !== "suspended") return partialSuspension();
+      return Response.json(
+        {
+          status: "suspended",
+          event_id: path[2],
+          event_hidden: true,
+          paid_sales_stopped: true,
+        },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    }
     const response = await backendFetch(
       `${path.map(encodeURIComponent).join("/")}${new URL(request.url).search}`,
       {
         method: request.method,
         headers,
-        ...(["POST", "PUT", "PATCH"].includes(request.method)
-          ? { body: await request.text() }
-          : {}),
+        ...(body !== undefined ? { body } : {}),
       },
     );
     const outputHeaders = new Headers({ "Cache-Control": "no-store" });
@@ -68,6 +173,20 @@ async function proxy(
   } catch (error) {
     return gatewayError(error);
   }
+}
+
+function partialSuspension() {
+  return Response.json(
+    {
+      error: {
+        code: "EVENT_SUSPENSION_INCOMPLETE",
+        message:
+          "The event was hidden and checkout was stopped, but the paid-sales suspension record could not be completed. Retry to finish the action.",
+        details: { event_hidden: true },
+      },
+    },
+    { status: 502, headers: { "Cache-Control": "no-store" } },
+  );
 }
 
 export const GET = proxy;

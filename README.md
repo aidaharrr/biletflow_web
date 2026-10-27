@@ -103,6 +103,73 @@ the downloaded campaign QR targets the same site as the displayed share link.
 Native image uploads, assigned seats, staff assignment, and real payments remain
 outside this portal task. The backend source was not modified.
 
+## Platform admin portal
+
+Sign in with a real backend account whose role is `platform_admin` (displayed as
+Admin), then open `/admin/dashboard`. The Navbar shows **Admin Panel** only for
+this role. Server-side layout and API gateway checks reject inactive accounts and
+other roles. `/admin` redirects to the dashboard.
+
+- `/admin/dashboard`: registered users, active published events, pending organizer
+  applications, escalated support, and links to moderation queues. Escalated case
+  details open in a read-only review dialog.
+- `/admin/organizers`: pending/reviewed applications, masked sandbox identity and
+  payout details, an activation readiness checklist, and approval/rejection dialogs.
+  Incomplete applications cannot be approved. Rejection requires a reason.
+- `/admin/events`: title search, Published/Draft/Suspended filters, event review,
+  and suspension with a reason. Visibility and paid-sales suspension are shown
+  separately when only part of an operation succeeds.
+- `/admin/users`: email search, account status filters, roles, user details,
+  session revocation, and account suspension with confirmation. The acting admin
+  cannot restrict their own account. Revocation ends sessions while suspension
+  disables the account; these are separate operations.
+
+### Biweekly report demo
+
+Open `/admin/dashboard?mode=demo` after signing in as an admin, or choose **Use demo
+data** in the portal. This explicitly selected mode uses typed static sample data
+and sends no moderation mutations to the backend. It still requires a running
+backend and a valid admin session; demo mode does not bypass authentication.
+
+Sample approvals, rejection reasons, event suspensions, and user restrictions
+carry across portal navigation. Use **Reset demo data** or reload the browser to
+restore the seed. The mode and sample snapshot date are clearly displayed. Sample
+changes are held in memory and are not saved to backend records or browser storage.
+Approving an application demonstrates the review decision; it does not activate
+paid sales automatically.
+
+### Admin API coverage and limits
+
+Live mode uses existing `/admin/users`, `/admin/events`, and
+`/admin/reports/operations` reads, plus supported user/event suspension routes.
+The inspected backend caps the user and event directories at 100 records. The
+registered-user metric uses the operations report's full count; the active-event
+metric is unavailable when the loaded list cannot cover the platform total.
+Missing metrics display an explanation instead of zero.
+
+The following proposed routes are not implemented in the inspected backend:
+
+- `GET /admin/organizer-applications` and
+  `POST /admin/organizer-applications/{id}/approve|reject`.
+- `GET /admin/support/cases?escalated=true`; responses must explicitly identify
+  escalations, since ordinary support statuses do not establish escalation.
+- `POST /admin/users/{id}/revoke-access`.
+
+Proposed response types include `OrganizerApplication`, `AdminSupportCase`, and
+`AdminRevocationResult` in `src/types/api.ts`. Live mode reports missing routes
+explicitly and offers the demo mode. Authentication, permission, network, and
+server failures are never silently replaced with sample data.
+
+The existing event-suspension endpoint stops paid sales but does not hide a public
+event. The gateway therefore unpublishes the event first, confirms draft status,
+then suspends paid sales. These are two nontransactional backend calls. If the
+second fails, the UI states that the event is hidden, preserves the reason, and
+allows a manual retry. The current backend can still allow organizers to
+republish an event; a permanent moderation lock requires backend enforcement.
+Live suspension endpoints also record only generic audit actions: retaining the
+submitted custom reasons requires backend changes. Demo mode retains those reasons.
+No backend source was changed for this portal.
+
 ## Design system
 
 `tailwind.config.ts` contains the mobile theme tokens under `theme.extend`.
@@ -139,7 +206,7 @@ try {
 }
 ```
 
-Attendee and organizer helpers use native fetch through `/api/backend`. The gateway
+Attendee, organizer, and admin helpers use native fetch through `/api/backend`. The gateway
 allows only explicitly configured paths and HTTP methods, including organizer
 POST/PUT/PATCH operations, and injects the request's Bearer token server-side.
 Login stores the token in a short-lived HttpOnly, SameSite=Lax cookie (Secure on
@@ -210,7 +277,9 @@ private payout/profile routes are not queried for public event pages.
   custom typography class merging; attendee filtering, inventory limits,
   pagination, promo requests, and calendar escaping/UTF-8 line folding; organizer
   lifecycle groups, weighted percentages, attributed revenue, exact KZT entry,
-  explicit time-zone conversion, and implemented API query/mutation signatures.
+  explicit time-zone conversion, and implemented API query/mutation signatures;
+  admin authorization, demo review rules/reset/idempotency, session restrictions,
+  suspension visibility, partial metric coverage, and missing-route handling.
 - `npm run lint`
 - `npm run typecheck`
 - `npm run build`
@@ -227,6 +296,9 @@ private payout/profile routes are not queried for public event pages.
   duplication without transactions, missing banners, partial ticket saves,
   paid activation/fee failure, opaque QR links, refund invalidation, support
   reply failure and status changes, and preservation of unsent replies.
+  Admin tests cover role denial (including demo mode), explicit live/demo modes,
+  review decisions and reasons, event hiding, account/session restrictions,
+  partial suspension retries, missing routes, and desktop/mobile layouts.
 
 The scaffold currently inherits a development-only npm advisory chain through
 `eslint-config-next` -> `fast-glob` -> `micromatch` -> `braces` (GHSA-vfj7-8cjw-p6xm).
