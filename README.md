@@ -23,8 +23,22 @@ does not require browser-to-backend CORS. The frontend does not start the backen
   images, a print-styled PDF window, and a downloadable `.ics` calendar file.
 - `/tickets`: owned orders and access to digital tickets; profile and sign-out.
 - `/login` and `/register`: authentication with a safe return destination.
-  Ticket quantities and a campaign promo survive the sign-in redirect.
-- `/campaign/[token]`: resolve an opaque campaign token before opening its event.
+  Ticket quantities and a campaign promo survive the sign-in redirect. After
+  registration the page confirms that a verification link was emailed.
+- `/verify-email?token=…`: submits the emailed verification token once.
+- `/forgot-password` and `/reset-password?token=…`: request a reset email (the
+  response never reveals whether an account exists) and set a new password. Used
+  or expired links show the backend's explanation.
+- Signed-in users with an unverified email see a banner with **Resend
+  verification email**. Organizers must verify before publishing.
+- `/campaign/[token]`: resolve an opaque campaign token. A usable promotion opens
+  the event with the code pre-applied; expired, disabled, exhausted, or scheduled
+  promotions show the server's message with a link to the event without it.
+
+Account-email actions use the same-origin `/api/auth/[action]` gateway
+(`verify-email`, `resend-verification`, `forgot-password`, `reset-password`),
+which never sets a session cookie for them. Email links come from the backend's
+`APP_FRONTEND_URL`, so it must match this site's public origin.
 
 Loading indicators, empty states, accessible form labels, and retryable API errors
 are included. Real attendee data comes from the backend; test fixtures are never
@@ -51,9 +65,12 @@ does not grant organizer privileges. `/organizer` redirects to the dashboard.
   implemented in the current backend. A duplicate opens with reusable source
   ticket configuration, which is saved as new types without historical counts.
 - `/organizer/campaigns`: event selector, percentage/fixed-KZT promo creation,
-  redemption limits and validity dates, confirmed-order discount/revenue totals,
-  and server-generated campaign QR download. Share links contain only an opaque
-  campaign token. Campaign QR images are explicitly labeled as non-admission.
+  redemption limits, validity dates, optional applicable paid ticket types,
+  server state badges, link visits, redemptions (including checkout holds),
+  orders/tickets and gross/discount/net from `/organizer/analytics/campaigns`,
+  Edit (name, dates, limit, applicable types) and Enable/Disable via `PATCH`, and
+  the server-generated purple "PROMO OFFER · Not an admission ticket" QR. Code and
+  discount are fixed after creation. Share links contain only an opaque token.
 - `/organizer/events/[id]`: all-time server summary, capacity and attendance
   progress, sales series with inclusive UTC date filters, ticket-type comparison,
   searchable order attendees, full simulated refunds with confirmation, and
@@ -68,9 +85,9 @@ does not grant organizer privileges. `/organizer` redirects to the dashboard.
 
 Creation dates use `Asia/Almaty` with an explicit UTC+05:00 offset, independent of
 the browser time zone. Money inputs are decimal strings converted to safe integer
-minor units. Campaign discount/revenue columns aggregate confirmed authoritative
-orders by `campaign_id`; they include processing fees in attributed revenue and
-exclude refunded, pending, and failed orders. Definitions are shown in the UI.
+minor units. Campaign figures come from the backend's campaign analytics:
+gross is the ticket subtotal and net is gross minus the discount (processing fees
+excluded); refunded, pending, and failed orders are excluded.
 
 Organizer integration gaps in the inspected backend:
 
@@ -78,18 +95,13 @@ Organizer integration gaps in the inspected backend:
    `POST /events/{id}/images` with `{ url }`, a proposed URL attachment payload.
    The wizard preserves the saved draft and offers retry or explicit continuation
    without the image. No banner is claimed to have been saved on failure.
-2. `GET /organizer/analytics/ticket-types` is documented but not implemented.
-   The proposed DTO is `TicketTypeAnalytics` in `src/types/api.ts`; it requires
-   `ticket_type_id`, `tickets_sold`, `gross_sales_minor`, and `currency`, with
-   optional discount/refund/net amounts. Until available, inventory counts remain
-   visible and revenue is marked unavailable rather than inferred from prices.
-3. The current cancellation route ignores a submitted reason; the UI sends it,
+2. The current cancellation route ignores a submitted reason; the UI sends it,
    but recording that reason in audit history requires backend support. The current
    duplication route does not copy ticket types, so the wizard materializes the
    visible source configuration as new records at its ticket step. Managed-event
    responses omit hidden ticket types, so their inventory and duplication require
    a fuller authorized backend response.
-4. The backend summary counts ticket-type quantities as capacity and sums only
+3. The backend summary counts ticket-type quantities as capacity and sums only
    confirmed orders for gross/discount/receipt totals. Its net calculation subtracts
    historical refunds from confirmed receipts; financial definitions need backend
    alignment before this can represent lifetime net revenue. The frontend displays
@@ -123,6 +135,8 @@ other roles. `/admin` redirects to the dashboard.
   session revocation, and account suspension with confirmation. The acting admin
   cannot restrict their own account. Revocation ends sessions while suspension
   disables the account; these are separate operations.
+- `/admin/campaigns`: platform-wide promo activity (event, code, discount, state,
+  link visits, redemptions) with code/event search, in live and demo modes.
 
 ### Biweekly report demo
 
@@ -227,33 +241,19 @@ yet enforce the contract's idempotency policy for these commands. Keys remain
 stable on manual retries with unchanged payloads, and change if the payload changes.
 There are no automatic mutation retries.
 
-### Backend additions required
+### Backend integration notes
 
-The frontend was built against the SRS and inspected current backend source. Two
-pieces are absent from the existing backend and were not changed in this task:
-
-1. `POST /api/v1/promo-codes/validate`, a read-only quote endpoint taking
-   `{ event_id, items: [{ ticket_type_id, quantity }], promo_code: string | null }`.
-   It should reuse checkout rules without reserving inventory or consuming a
-   promo redemption. Its response needs integer `subtotal_minor`,
-   `discount_minor`, `processing_fee_minor`, `total_minor`, `currency: "KZT"`,
-   and `promo_code: string | null`. An optional `is_simulation` is supported.
-2. Owned order responses must include `items` and issued `tickets`, or expose
-   `order_id` on owned ticket responses. The current schemas omit the order's
-   line items and all ticket-to-order associations. The preferred order shape
-   is `Order` in `src/types/api.ts`, including `items: OrderItem[]` and
-   `tickets: Ticket[]` (one canonical ticket per attendee/seat).
-
-Until the quote route exists, the frontend shows an estimated subtotal and
-displays validated discounts and the final total in the existing checkout
-reservation response. Invalid codes still fail on the server. Until order
-associations exist, confirmation shows totals but explains that itemized tickets
-are unavailable. It never assigns tickets to an order by guessing from event ID.
-QR and PDF downloads use existing authenticated `/tickets/{id}/qr` and `/pdf`.
-
-Closing a reserved checkout follows the backend's existing hold expiry policy;
-there is no current cancellation endpoint. Reclaiming expired inventory is a
-backend responsibility. The frontend prevents confirmation once the hold expires.
+- `POST /promo-codes/validate` prices the selection without reserving inventory;
+  the event page shows "Code X applied" with the saving, and rejections (expired,
+  disabled, exhausted, not applicable) display the backend message verbatim.
+- Closing the checkout modal with a pending order calls
+  `POST /checkout/sessions/{id}/cancel` (best effort) to release the hold.
+- Confirmed orders are emailed with PDF tickets; the order page says so and offers
+  **Resend tickets by email** (`POST /orders/{id}/resend-confirmation`).
+- Still missing in the backend: owned ticket responses do not expose `order_id`
+  (or `order_item_id`), so the order page shows totals and items but cannot list
+  that order's tickets; tickets remain available under `/tickets`. It never assigns
+  tickets to an order by guessing from event ID.
 
 ### Money and contract alignment
 

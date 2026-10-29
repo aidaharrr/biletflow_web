@@ -7,6 +7,14 @@ import {
 } from "@/lib/server-api";
 import type { LoginResponse } from "@/types/api";
 
+/** Public, unauthenticated account-email actions passed through to the backend. */
+const EMAIL_ACTIONS = new Set([
+  "verify-email",
+  "resend-verification",
+  "forgot-password",
+  "reset-password",
+]);
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ action: string }> },
@@ -52,7 +60,7 @@ export async function POST(
     (await cookies()).delete(SESSION_COOKIE);
     return new Response(null, { status: 204 });
   }
-  if (action !== "login" && action !== "register")
+  if (action !== "login" && action !== "register" && !EMAIL_ACTIONS.has(action))
     return new Response(null, { status: 404 });
   try {
     const response = await backendFetch(
@@ -74,6 +82,17 @@ export async function POST(
       });
     if (action === "register")
       return Response.json(await response.json(), { status: 201 });
+    // Email actions never create a session; demo token headers are not forwarded.
+    if (EMAIL_ACTIONS.has(action))
+      return new Response(response.status === 204 ? null : response.body, {
+        status: response.status,
+        headers: {
+          ...(response.status === 204
+            ? {}
+            : { "Content-Type": "application/json" }),
+          "Cache-Control": "no-store",
+        },
+      });
     const session = (await response.json()) as LoginResponse;
     (await cookies()).set(SESSION_COOKIE, session.access_token, {
       httpOnly: true,

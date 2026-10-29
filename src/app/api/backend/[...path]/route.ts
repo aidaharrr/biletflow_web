@@ -16,13 +16,14 @@ async function proxy(
     return new Response(null, { status: 404 });
   const route = path.join("/");
   const allowed: Record<string, RegExp> = {
-    GET: /^(events(?:\/[^/]+(?:\/(ticket-types|orders|history|paid-sales|campaigns)(?:\/[^/]+\/qr)?)?)?|orders(?:\/[^/]+)?|tickets(?:\/[^/]+(?:\/(qr|pdf))?)?|campaigns\/resolve\/[^/]+|organizer\/events|organizer\/analytics\/(summary|sales-series|ticket-types|campaigns|attendance)|support\/cases(?:\/[^/]+\/messages)?)$/,
-    POST: /^(events(?:\/[^/]+\/(publish|unpublish|cancel|duplicate|images|ticket-types|campaigns|paid-sales\/(accept-terms|activation-fee|activate)))?|orders\/[^/]+\/refunds|checkout\/sessions(?:\/[^/]+\/complete)?|promo-codes\/validate|organizer-profile\/verification\/submit|support\/cases(?:\/[^/]+\/messages)?)$/,
+    GET: /^(events(?:\/[^/]+(?:\/(ticket-types|orders|history|paid-sales|campaigns)(?:\/[^/]+(?:\/qr)?)?)?)?|orders(?:\/[^/]+)?|tickets(?:\/[^/]+(?:\/(qr|pdf))?)?|campaigns\/resolve\/[^/]+|organizer\/events|organizer\/analytics\/(summary|sales-series|ticket-types|campaigns|attendance)|support\/cases(?:\/[^/]+\/messages)?)$/,
+    POST: /^(events(?:\/[^/]+\/(publish|unpublish|cancel|duplicate|images|ticket-types|campaigns|paid-sales\/(accept-terms|activation-fee|activate)))?|orders\/[^/]+\/(refunds|resend-confirmation)|checkout\/sessions(?:\/[^/]+\/(complete|cancel))?|promo-codes\/validate|organizer-profile\/verification\/submit|support\/cases(?:\/[^/]+\/messages)?)$/,
     PUT: /^organizer-profile(?:\/payout-account)?$/,
-    PATCH: /^(events\/[^/]+|support\/cases\/[^/]+\/status)$/,
+    PATCH:
+      /^(events\/[^/]+(?:\/campaigns\/[^/]+)?|support\/cases\/[^/]+\/status)$/,
   };
   const adminRead =
-    /^admin\/(users|events|organizer-applications|support\/cases|reports\/operations)$/;
+    /^admin\/(users|events|campaigns|organizer-applications|support\/cases|reports\/operations)$/;
   const adminWrite =
     /^admin\/(organizer-applications\/[^/]+\/(approve|reject)|events\/[^/]+\/suspend|users\/[^/]+\/(suspend|revoke-access))$/;
   const adminAllowed =

@@ -13,6 +13,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const { refresh } = useAuth();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
   const registering = mode === "register";
   const requested = query.get("next") ?? "/events";
   const destination =
@@ -42,6 +43,10 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         });
       await client.post("login", credentials);
       await refresh();
+      if (registering) {
+        setRegisteredEmail(credentials.email);
+        return;
+      }
       router.push(destination);
     } catch (error) {
       setError(
@@ -53,6 +58,27 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       setPending(false);
     }
   }
+  if (registeredEmail)
+    return (
+      <main className="mx-auto max-w-[32rem] px-md py-12">
+        <Card className="space-y-lg">
+          <h1 className="font-brand text-2xl font-semibold">
+            Check your email
+          </h1>
+          <p role="status" className="text-text-secondary">
+            Your account is ready. We sent a verification link to{" "}
+            <strong className="text-text-primary">{registeredEmail}</strong>.
+            The link expires in 24 hours.
+          </p>
+          <Link
+            href={destination}
+            className="block rounded-button bg-primary px-5 py-3.5 text-center font-medium text-white"
+          >
+            Continue
+          </Link>
+        </Card>
+      </main>
+    );
   return (
     <main className="mx-auto max-w-[32rem] px-md py-12">
       <Card className="space-y-lg">
@@ -95,6 +121,13 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             autoComplete={registering ? "new-password" : "current-password"}
             disabled={pending}
           />
+          {!registering && (
+            <p className="text-right text-label">
+              <Link href="/forgot-password" className="underline">
+                Forgot password?
+              </Link>
+            </p>
+          )}
           <Button type="submit" className="w-full" loading={pending}>
             {registering ? "Create account" : "Sign in"}
           </Button>

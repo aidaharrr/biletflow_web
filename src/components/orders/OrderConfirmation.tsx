@@ -5,7 +5,13 @@ import { Badge, Button, Card } from "@/components/ui";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { TicketQr } from "./TicketQr";
-import { getOrder, getEvent, listTickets, ApiError } from "@/lib/api";
+import {
+  getOrder,
+  getEvent,
+  listTickets,
+  resendOrderConfirmation,
+  ApiError,
+} from "@/lib/api";
 import { formatKZT } from "@/lib/money";
 import { eventDate } from "@/lib/events";
 import { downloadCalendar } from "@/lib/calendar";
@@ -44,6 +50,8 @@ export function OrderConfirmation({ id }: { id: string }) {
   const { data, loading, error, retry } = useApiData(load);
   const [actionError, setActionError] = useState<unknown>(null);
   const [printing, setPrinting] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState<string | null>(null);
   if (loading) return <LoadingSpinner label="Loading your booking…" />;
   if (error || !data)
     return (
@@ -64,6 +72,18 @@ export function OrderConfirmation({ id }: { id: string }) {
     );
   const { order, event, tickets, ticketError } = data;
   const confirmed = order.status === "confirmed";
+  async function resend() {
+    setResending(true);
+    setActionError(null);
+    try {
+      const result = await resendOrderConfirmation(order.id);
+      setResent(result?.message ?? `Tickets sent to ${order.attendee_email}.`);
+    } catch (error) {
+      setActionError(error);
+    } finally {
+      setResending(false);
+    }
+  }
   async function openPrint(ticket: Ticket) {
     if (!data) return;
     setPrinting(ticket.id);
@@ -165,10 +185,15 @@ export function OrderConfirmation({ id }: { id: string }) {
               <dt>Subtotal</dt>
               <dd>{formatKZT(order.subtotal_minor)}</dd>
             </div>
-            <div className="flex justify-between">
-              <dt>Discount</dt>
-              <dd>−{formatKZT(order.discount_minor)}</dd>
-            </div>
+            {order.discount_minor > 0 && (
+              <div className="flex justify-between">
+                <dt>
+                  Discount
+                  {order.promo_code ? ` (code ${order.promo_code})` : ""}
+                </dt>
+                <dd>−{formatKZT(order.discount_minor)}</dd>
+              </div>
+            )}
             <div className="flex justify-between">
               <dt>Processing fee</dt>
               <dd>{formatKZT(order.processing_fee_minor)}</dd>
@@ -185,6 +210,21 @@ export function OrderConfirmation({ id }: { id: string }) {
           )}
         </Card>
       </div>
+      {confirmed && (
+        <Card className="flex flex-wrap items-center justify-between gap-md">
+          <p role="status" className="text-label">
+            {resent ?? (
+              <>
+                Your tickets and printable PDFs were emailed to{" "}
+                <strong>{order.attendee_email}</strong>.
+              </>
+            )}
+          </p>
+          <Button variant="outlined" loading={resending} onClick={resend}>
+            Resend tickets by email
+          </Button>
+        </Card>
+      )}
       {!!actionError && <ErrorState error={actionError} />}
       <section className="space-y-lg">
         <div className="flex flex-wrap items-center justify-between gap-md">

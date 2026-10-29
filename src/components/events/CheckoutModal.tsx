@@ -3,7 +3,11 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input } from "@/components/ui";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { createCheckoutSession, completeCheckoutSession } from "@/lib/api";
+import {
+  cancelCheckoutSession,
+  createCheckoutSession,
+  completeCheckoutSession,
+} from "@/lib/api";
 import { formatKZT } from "@/lib/money";
 import type {
   CheckoutItem,
@@ -87,6 +91,12 @@ export function CheckoutModal({
       setPending(false);
     }
   }
+  function close() {
+    // Release reserved tickets (and any promo hold) instead of waiting for expiry.
+    if (order?.status === "pending")
+      cancelCheckoutSession(order.id).catch(() => undefined);
+    onClose();
+  }
   const seconds = order
     ? Math.max(0, Math.floor((Date.parse(order.expires_at) - now) / 1000))
     : 0;
@@ -96,7 +106,7 @@ export function CheckoutModal({
       aria-labelledby="checkout-title"
       onCancel={(event) => {
         event.preventDefault();
-        if (!pending) onClose();
+        if (!pending) close();
       }}
       className="m-auto w-[calc(100%-2rem)] max-w-[32rem] rounded-card border border-divider bg-surface p-0 text-text-primary shadow-xl backdrop:bg-brand-dark/50"
     >
@@ -117,7 +127,7 @@ export function CheckoutModal({
             type="button"
             aria-label="Close checkout"
             disabled={pending}
-            onClick={onClose}
+            onClick={close}
             className="rounded-input p-sm text-xl disabled:opacity-disabled"
           >
             ×
@@ -204,7 +214,12 @@ export function CheckoutModal({
               </div>
               {order.discount_minor > 0 && (
                 <div className="flex justify-between">
-                  <dt>Discount{promoCode ? ` (${promoCode})` : ""}</dt>
+                  <dt>
+                    Discount
+                    {(order.promo_code ?? promoCode)
+                      ? ` (${order.promo_code ?? promoCode})`
+                      : ""}
+                  </dt>
                   <dd>−{formatKZT(order.discount_minor)}</dd>
                 </div>
               )}

@@ -151,6 +151,8 @@ export interface Order {
   total_minor: MinorUnits;
   expires_at: ISODateTime;
   campaign_id: UUID | null;
+  /** Code of the applied campaign, if any. */
+  promo_code?: string | null;
   items?: OrderItem[];
   tickets?: Ticket[];
   created_at: ISODateTime;
@@ -197,8 +199,70 @@ export interface PromotionalCampaign {
   max_redemptions: number;
   redemption_count: number;
   enabled: boolean;
+  /** null applies the campaign to every paid ticket type of the event. */
+  applicable_ticket_type_ids: UUID[] | null;
+  visit_count: number;
+  state: CampaignState;
+  /** Redemptions reserved by pending checkouts. */
+  held_redemptions: number;
+  campaign_url: string;
   created_at: ISODateTime;
   updated_at: ISODateTime;
+}
+export type CampaignState =
+  "active" | "scheduled" | "expired" | "exhausted" | "disabled";
+export interface CampaignUpdate {
+  name?: string;
+  valid_from?: ISODateTime;
+  valid_until?: ISODateTime;
+  max_redemptions?: number;
+  enabled?: boolean;
+  applicable_ticket_type_ids?: UUID[] | null;
+}
+/** GET /organizer/analytics/campaigns: exact figures from BiletFlow orders. */
+export interface CampaignAnalytics {
+  id: UUID;
+  name: string;
+  code: string;
+  state: CampaignState;
+  visits: number;
+  redemptions: number;
+  maximum: number;
+  orders: number;
+  tickets_sold: number;
+  gross_revenue_minor: MinorUnits;
+  discount_minor: MinorUnits;
+  net_revenue_minor: MinorUnits;
+  refunded_orders: number;
+  refunded_minor: MinorUnits;
+  conversion_rate: number | null;
+  currency: Currency;
+  is_simulation: boolean;
+}
+/** GET /campaigns/resolve/{token}; promo_code is present only while usable. */
+export interface CampaignResolution {
+  event_id: UUID;
+  event_title: string;
+  campaign_name: string;
+  state: CampaignState | "event_cancelled";
+  promo_code: string | null;
+  discount_type: DiscountType;
+  discount_value: number;
+  message: string | null;
+}
+export interface AdminCampaign {
+  id: UUID;
+  event_id: UUID;
+  event_title: string;
+  name: string;
+  code: string;
+  discount_type: DiscountType;
+  discount_value: number;
+  state: CampaignState;
+  visits: number;
+  redemptions: number;
+  maximum: number;
+  created_at: ISODateTime;
 }
 
 export interface SupportCase {
@@ -278,6 +342,7 @@ export interface CheckoutQuote {
   total_minor: MinorUnits;
   currency: Currency;
   promo_code: string | null;
+  campaign_name?: string | null;
   is_simulation?: boolean;
 }
 
@@ -316,7 +381,7 @@ export type CampaignWrite = Pick<
   | "valid_from"
   | "valid_until"
   | "max_redemptions"
->;
+> & { applicable_ticket_type_ids?: UUID[] | null };
 export interface PaidSalesChecklist {
   status: PaidSalesStatus;
   checklist: {
@@ -504,4 +569,5 @@ export interface AdminApi {
     reason: string,
     key: string,
   ) => Promise<AdminRevocationResult>;
+  getCampaigns: (options?: AdminQueryOptions) => Promise<AdminCampaign[]>;
 }

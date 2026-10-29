@@ -352,3 +352,16 @@ test("report dashboard, moderation queues, and review modals fit mobile", async 
   expect(modal.x + modal.width).toBeLessThanOrEqual(375);
   await page.screenshot({ path: "test-results/admin-review-mobile.png" });
 });
+test("promo activity lists demo campaigns and searches by code", async ({
+  page,
+}) => {
+  await login(page, "/admin/campaigns?mode=demo");
+  await expect(
+    page.getByRole("heading", { name: "Promo activity" }),
+  ).toBeVisible();
+  await expect(page.getByText("CAMPUS20", { exact: true })).toBeVisible();
+  await page.getByLabel("Search by code or event").fill("early");
+  await page.getByRole("button", { name: "Search campaigns" }).click();
+  await expect(page.getByText("EARLY5000", { exact: true })).toBeVisible();
+  await expect(page.getByText("CAMPUS20", { exact: true })).toBeHidden();
+});

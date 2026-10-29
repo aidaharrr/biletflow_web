@@ -12,6 +12,10 @@ import type {
   EventWrite,
   TicketTypeWrite,
   CampaignWrite,
+  CampaignUpdate,
+  CampaignAnalytics,
+  CampaignResolution,
+  AdminCampaign,
   PromotionalCampaign,
   OrganizerProfile,
   PaidSalesChecklist,
@@ -391,9 +395,26 @@ export function resolveCampaign(
   options: ApiRequestOptions = {},
   client = getAttendeeClient(),
 ) {
-  return client.get<{ event_id: string; promo_code: string }>(
+  return client.get<CampaignResolution>(
     `/campaigns/resolve/${encodeURIComponent(token)}`,
     options,
+  );
+}
+/** Releases a pending checkout's reserved tickets and promo hold. */
+export function cancelCheckoutSession(
+  id: string,
+  client = getAttendeeClient(),
+) {
+  return client.post<Order>(
+    `/checkout/sessions/${encodeURIComponent(id)}/cancel`,
+  );
+}
+export function resendOrderConfirmation(
+  id: string,
+  client = getAttendeeClient(),
+) {
+  return client.post<{ message: string }>(
+    `/orders/${encodeURIComponent(id)}/resend-confirmation`,
   );
 }
 export function getTicketQr(
@@ -411,6 +432,9 @@ export function getTicketPdf(
   return client.download(`/tickets/${encodeURIComponent(id)}/pdf`, options);
 }
 
+const GENERIC_DETAILS =
+  /^(not found|forbidden|method not allowed|insufficient permissions)\.?$/i;
+
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (
@@ -419,14 +443,26 @@ export function errorMessage(error: unknown): string {
       )
     )
       return error.message;
+    const detail = error.details.detail;
+    // Specific backend explanations (e.g. "Verify your email address before
+    // publishing events") beat generic status text; framework defaults do not.
+    const specific =
+      typeof detail === "string" &&
+      detail.trim() &&
+      !GENERIC_DETAILS.test(detail.trim())
+        ? detail
+        : null;
     if (error.status === 401)
       return "Your session has expired. Please sign in again.";
-    if (error.status === 403) return "You do not have access to this page.";
+    if (error.status === 403)
+      return specific ?? "You do not have access to this page.";
     if (error.status === 404)
-      return "This resource or API route is unavailable. Please try again or contact support.";
+      return (
+        specific ??
+        "This resource or API route is unavailable. Please try again or contact support."
+      );
     if (error.code === "NETWORK_ERROR")
       return "We could not reach BiletFlow. Please try again.";
-    const detail = error.details.detail;
     if (Array.isArray(detail))
       return detail
         .map((field: { msg?: string }) => field.msg ?? "Invalid field")
@@ -664,6 +700,7 @@ export function createLiveAdminApi(client?: ApiClient): AdminApi {
     suspendUser: (id, reason, key) => suspendUser(id, reason, key, client),
     revokeUserAccess: (id, reason, key) =>
       revokeUserAccess(id, reason, key, client),
+    getCampaigns: (query) => getAdminCampaigns(options(query), client),
   };
 }
 
@@ -842,6 +879,34 @@ export function createCampaign(
     body,
     { idempotencyKey: key },
   );
+}
+export function updateCampaign(
+  eventId: string,
+  id: string,
+  body: CampaignUpdate,
+  client = getAttendeeClient(),
+) {
+  return client.patch<PromotionalCampaign>(
+    `/events/${encodeURIComponent(eventId)}/campaigns/${encodeURIComponent(id)}`,
+    body,
+  );
+}
+export function getCampaignAnalytics(
+  eventId: string,
+  options: ApiRequestOptions = {},
+  client = getAttendeeClient(),
+) {
+  return collection<CampaignAnalytics>(
+    "/organizer/analytics/campaigns",
+    { ...options, params: { ...options.params, event_id: eventId } },
+    client,
+  );
+}
+export function getAdminCampaigns(
+  options: ApiRequestOptions = {},
+  client = getAttendeeClient(),
+) {
+  return collection<AdminCampaign>("/admin/campaigns", options, client);
 }
 export function getCampaignQr(
   eventId: string,

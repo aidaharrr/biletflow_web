@@ -244,3 +244,30 @@ test("custom typography tokens are retained alongside colors when merging classe
     "disabled:opacity-50",
   );
 });
+
+test("errorMessage prefers specific backend detail over generic 403/404 text", async () => {
+  const { errorMessage } = await import("../src/lib/api");
+  const failing = (status: number, detail: string) =>
+    createApiClient({
+      fetch: mockFetch(() => Response.json({ detail }, { status })),
+    }).get("/x");
+  const message = async (status: number, detail: string) =>
+    errorMessage(await failing(status, detail).catch((error) => error));
+  assert.equal(
+    await message(403, "Verify your email address before publishing events"),
+    "Verify your email address before publishing events",
+  );
+  assert.equal(await message(404, "Campaign not found"), "Campaign not found");
+  assert.equal(
+    await message(404, "Not Found"),
+    "This resource or API route is unavailable. Please try again or contact support.",
+  );
+  assert.equal(
+    await message(403, "Insufficient permissions"),
+    "You do not have access to this page.",
+  );
+  assert.equal(
+    await message(401, "Invalid authentication"),
+    "Your session has expired. Please sign in again.",
+  );
+});

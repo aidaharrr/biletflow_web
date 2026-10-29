@@ -299,3 +299,49 @@ test("gateway rejects cross-origin login and checkout requests", async ({
     expect(response.status()).toBe(403);
   }
 });
+test("expired campaign links explain the problem and still open the event", async ({
+  page,
+}) => {
+  await page.goto("/campaign/expired-offer");
+  await expect(page.getByText("Promo code SAVE20 has expired.")).toBeVisible();
+  await page
+    .getByRole("link", { name: "View event without the promotion" })
+    .click();
+  await expect(page).toHaveURL(new RegExp(`/events/${paidId}$`));
+});
+test("password reset and email verification flows", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByRole("link", { name: "Forgot password?" }).click();
+  await page.getByLabel("Email", { exact: true }).fill("attendee@example.com");
+  await page.getByRole("button", { name: "Send reset link" }).click();
+  await expect(
+    page.getByText("If the account exists, we sent an email", { exact: false }),
+  ).toBeVisible();
+
+  await page.goto("/reset-password?token=used-token");
+  await page.getByLabel("New password", { exact: true }).fill("NewPass123!");
+  await page.getByLabel("Confirm new password").fill("NewPass123!");
+  await page.getByRole("button", { name: "Update password" }).click();
+  await expect(
+    page.getByText("This reset link is invalid, expired, or already used"),
+  ).toBeVisible();
+  await page.goto("/reset-password?token=good-reset-token");
+  await page.getByLabel("New password", { exact: true }).fill("NewPass123!");
+  await page.getByLabel("Confirm new password").fill("Mismatch123!");
+  await page.getByRole("button", { name: "Update password" }).click();
+  await expect(page.getByText("The passwords do not match.")).toBeVisible();
+  await page.getByLabel("Confirm new password").fill("NewPass123!");
+  await page.getByRole("button", { name: "Update password" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Password changed" }),
+  ).toBeVisible();
+
+  await page.goto("/verify-email?token=good-verify-token");
+  await expect(
+    page.getByRole("heading", { name: "Email verified" }),
+  ).toBeVisible();
+  await page.goto("/verify-email?token=bad");
+  await expect(
+    page.getByText("This verification link is invalid or has expired"),
+  ).toBeVisible();
+});

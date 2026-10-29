@@ -64,6 +64,11 @@ export function createOrganizerFixture({
         max_redemptions: 100,
         redemption_count: 3,
         enabled: true,
+        applicable_ticket_type_ids: null,
+        visit_count: 12,
+        state: "active",
+        held_redemptions: 0,
+        campaign_url: "http://127.0.0.1:3011/campaign/fixture-opaque-campaign",
         created_at: stamp(),
         updated_at: stamp(),
       };
@@ -75,6 +80,8 @@ export function createOrganizerFixture({
         opaque_token: "expired-token",
         valid_until: new Date(Date.now() - 1000).toISOString(),
         redemption_count: 90,
+        state: "expired",
+        campaign_url: "http://127.0.0.1:3011/campaign/expired-token",
       });
       const orderId = "77777777-7777-4777-8777-777777777777";
       const item = {
@@ -424,7 +431,47 @@ export function createOrganizerFixture({
             : 0,
           is_simulation: true,
         });
-      } else if (parts[3] === "sales-series")
+      } else if (parts[3] === "campaigns")
+        send(
+          campaigns
+            .filter((campaign) => campaign.event_id === event.id)
+            .map((campaign) => {
+              const attributed = confirmed.filter(
+                (order) => order.campaign_id === campaign.id,
+              );
+              const sum = (key) =>
+                attributed.reduce((total, order) => total + order[key], 0);
+              return {
+                id: campaign.id,
+                name: campaign.name,
+                code: campaign.code,
+                state: campaign.state,
+                visits: campaign.visit_count,
+                redemptions: campaign.redemption_count,
+                maximum: campaign.max_redemptions,
+                orders: attributed.length,
+                tickets_sold: attributed.reduce(
+                  (total, order) =>
+                    total +
+                    (order.items ?? []).reduce(
+                      (n, item) => n + item.quantity,
+                      0,
+                    ),
+                  0,
+                ),
+                gross_revenue_minor: sum("subtotal_minor"),
+                discount_minor: sum("discount_minor"),
+                net_revenue_minor:
+                  sum("subtotal_minor") - sum("discount_minor"),
+                refunded_orders: 0,
+                refunded_minor: 0,
+                conversion_rate: null,
+                currency: "KZT",
+                is_simulation: true,
+              };
+            }),
+        );
+      else if (parts[3] === "sales-series")
         send(
           confirmed.map((order) => ({
             date: order.created_at.slice(0, 10),
@@ -445,10 +492,32 @@ export function createOrganizerFixture({
       return true;
     }
     if (/^\/events\/[^/]+\/campaigns/.test(path)) {
-      if (parts[5] === "qr") {
+      const existing = parts[4]
+        ? campaigns.find(
+            (campaign) =>
+              campaign.id === parts[4] && campaign.event_id === event.id,
+          )
+        : null;
+      if (parts[4] && !existing) send({ detail: "Campaign not found" }, 404);
+      else if (parts[5] === "qr") {
         response.writeHead(200, { "Content-Type": "image/svg+xml" });
         response.end(qr);
-      } else if (request.method === "GET")
+      } else if (existing && request.method === "PATCH") {
+        Object.assign(existing, body, { updated_at: stamp() });
+        if ("enabled" in body)
+          existing.state = body.enabled ? "active" : "disabled";
+        log(
+          event,
+          "enabled" in body
+            ? `campaign.${body.enabled ? "enabled" : "disabled"}`
+            : "campaign.updated",
+          `Promo code ${existing.code} updated`,
+          "campaign",
+          existing.id,
+        );
+        send(existing);
+      } else if (existing) send(existing);
+      else if (request.method === "GET")
         send(campaigns.filter((campaign) => campaign.event_id === event.id));
       else {
         const campaign = {
@@ -459,9 +528,14 @@ export function createOrganizerFixture({
           opaque_token: randomBytes(24).toString("base64url"),
           redemption_count: 0,
           enabled: true,
+          applicable_ticket_type_ids: body.applicable_ticket_type_ids ?? null,
+          visit_count: 0,
+          state: "active",
+          held_redemptions: 0,
           created_at: stamp(),
           updated_at: stamp(),
         };
+        campaign.campaign_url = `http://127.0.0.1:3011/campaign/${campaign.opaque_token}`;
         campaigns.push(campaign);
         log(
           event,

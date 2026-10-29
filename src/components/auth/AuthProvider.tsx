@@ -18,11 +18,15 @@ interface AuthState {
 }
 const AuthContext = createContext<AuthState | null>(null);
 
-async function readSession(signal?: AbortSignal) {
-  const client = createApiClient({
+/** Same-origin auth gateway: login/session plus the public account-email actions. */
+export function authGatewayClient() {
+  return createApiClient({
     baseUrl: new URL("/api/auth", window.location.origin).href,
   });
-  return client.get<{ user: User | null }>("session", { signal });
+}
+
+async function readSession(signal?: AbortSignal) {
+  return authGatewayClient().get<{ user: User | null }>("session", { signal });
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -39,10 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
   async function signOut() {
-    const client = createApiClient({
-      baseUrl: new URL("/api/auth", window.location.origin).href,
-    });
-    await client.post("logout");
+    await authGatewayClient().post("logout");
     setUser(null);
   }
   useEffect(() => {

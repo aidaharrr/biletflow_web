@@ -2,6 +2,7 @@ import { ApiError } from "./api";
 import { canApproveOrganizer, hasAdminRole, isActiveEvent } from "./admin";
 import type {
   AdminApi,
+  AdminCampaign,
   AdminEvent,
   AdminSupportCase,
   AdminUser,
@@ -199,7 +200,37 @@ function seed(actor: User) {
       updated_at: "2026-10-19T08:00:00Z",
     },
   ];
-  return { users, events, applications, cases };
+  const campaigns: AdminCampaign[] = [
+    {
+      id: eid("71"),
+      event_id: events[0].id,
+      event_title: events[0].title,
+      name: "University partners",
+      code: "CAMPUS20",
+      discount_type: "percentage",
+      discount_value: 20,
+      state: "active",
+      visits: 412,
+      redemptions: 37,
+      maximum: 100,
+      created_at: "2026-10-01T09:00:00Z",
+    },
+    {
+      id: eid("72"),
+      event_id: events[1].id,
+      event_title: events[1].title,
+      name: "Early birds",
+      code: "EARLY5000",
+      discount_type: "fixed_kzt",
+      discount_value: 500_000,
+      state: "exhausted",
+      visits: 96,
+      redemptions: 50,
+      maximum: 50,
+      created_at: "2026-09-20T09:00:00Z",
+    },
+  ];
+  return { users, events, applications, cases, campaigns };
 }
 function requireReason(reason: string) {
   const value = reason.trim();
@@ -333,6 +364,18 @@ export function createAdminDemoApi(
         app.reviewed_at = new Date().toISOString();
         return app;
       }),
+    getCampaigns: (options) =>
+      read(
+        () =>
+          state.campaigns.filter(
+            (campaign) =>
+              !options?.query ||
+              [campaign.code, campaign.event_title].some((value) =>
+                value.toLowerCase().includes(options.query!.toLowerCase()),
+              ),
+          ),
+        options?.signal,
+      ),
     getEvents: (options) =>
       read(
         () =>

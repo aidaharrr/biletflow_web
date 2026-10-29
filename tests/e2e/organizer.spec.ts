@@ -260,6 +260,13 @@ test("campaigns report confirmed order values and generate an opaque promotional
     /^biletflow-campaign-.+\.png$/,
   );
   await page.getByRole("button", { name: "Close dialog" }).click();
+  const row = page.getByRole("row", { name: /LAUNCH15/ });
+  await row.getByRole("button", { name: "Disable" }).click();
+  await expect(row.getByText("Disabled", { exact: true })).toBeVisible();
+  await row.getByRole("button", { name: "Edit" }).click();
+  await page.getByLabel("Maximum redemptions").fill("40");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(row).toContainText("0 / 40");
   const response = await request.get(`${fixture}/events/${paidId}/campaigns`, {
     headers: { Authorization: "Bearer fixture-token" },
   });

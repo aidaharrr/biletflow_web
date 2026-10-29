@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { EmailVerificationBanner } from "@/components/auth/AccountEmailForms";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { Navbar } from "@/components/layout/Navbar";
 import "@fontsource/poppins/400.css";
@@ -32,6 +33,7 @@ export default function RootLayout({
           >
             <Navbar />
           </Suspense>
+          <EmailVerificationBanner />
           {children}
         </AuthProvider>
       </body>

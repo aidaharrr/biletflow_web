@@ -7,17 +7,19 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorState } from "@/components/ui/ErrorState";
 import {
   createCampaign,
+  getCampaignAnalytics,
   getCampaignQr,
   listCampaigns,
-  listEventOrders,
   listOrganizerEvents,
+  updateCampaign,
 } from "@/lib/api";
 import {
-  activeCampaign,
-  campaignTotals,
+  campaignStateLabel,
   campaignUrl,
   dateLabel,
+  discountLabel,
   kazakhstanTime,
+  localDateInput,
   parseKZT,
 } from "@/lib/organizer";
 import { formatKZT } from "@/lib/money";
@@ -95,28 +97,52 @@ function EventCampaigns({
   createInitially: boolean;
 }) {
   const [creating, setCreating] = useState(createInitially);
+  const [editing, setEditing] = useState<PromotionalCampaign | null>(null);
   const [qr, setQr] = useState<PromotionalCampaign | null>(null);
+  const [toggling, setToggling] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<unknown>(null);
   const load = useCallback(
     async (signal: AbortSignal) => {
-      const [campaigns, orders] = await Promise.allSettled([
+      const [campaigns, analytics] = await Promise.allSettled([
         listCampaigns(event.id, { signal }),
-        listEventOrders(event.id, { signal }),
+        getCampaignAnalytics(event.id, { signal }),
       ]);
       if (campaigns.status === "rejected") throw campaigns.reason;
       return {
         campaigns: campaigns.value,
-        orders: orders.status === "fulfilled" ? orders.value : null,
-        orderError: orders.status === "rejected" ? orders.reason : null,
-        asOf: Date.now(),
+        analytics:
+          analytics.status === "fulfilled"
+            ? new Map(analytics.value.map((row) => [row.id, row]))
+            : null,
+        analyticsError:
+          analytics.status === "rejected" ? analytics.reason : null,
       };
     },
     [event.id],
   );
   const resource = useApiData(load);
+  async function toggle(campaign: PromotionalCampaign) {
+    setToggling(campaign.id);
+    setActionError(null);
+    try {
+      await updateCampaign(event.id, campaign.id, {
+        enabled: !campaign.enabled,
+      });
+      resource.retry();
+    } catch (error) {
+      setActionError(error);
+    } finally {
+      setToggling(null);
+    }
+  }
   if (resource.loading)
     return <LoadingSpinner label="Loading campaigns and attributed orders…" />;
   if (resource.error || !resource.data)
     return <ErrorState error={resource.error} retry={resource.retry} />;
+  const { campaigns, analytics, analyticsError } = resource.data;
+  const typeName = (id: string) =>
+    event.available_ticket_types.find((type) => type.id === id)?.name ??
+    "Hidden ticket type";
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-md">
@@ -128,22 +154,24 @@ function EventCampaigns({
           Create Promo Campaign
         </Button>
       </div>
-      {resource.data.orderError && (
-        <ErrorState error={resource.data.orderError} retry={resource.retry} />
+      {!!analyticsError && (
+        <ErrorState error={analyticsError} retry={resource.retry} />
       )}
+      {!!actionError && <ErrorState error={actionError} />}
       <Card className="overflow-hidden p-0">
         <div className="overflow-x-auto">
-          {resource.data.campaigns.length ? (
-            <table className="w-full min-w-[820px] text-left text-label">
+          {campaigns.length ? (
+            <table className="w-full min-w-[980px] text-left text-label">
               <thead className="border-b border-divider bg-background text-text-secondary">
                 <tr>
                   {[
                     "Campaign / Code",
                     "Discount",
+                    "Visits",
                     "Redemptions",
-                    "Gross discount value",
-                    "Attributed revenue",
-                    "Campaign QR",
+                    "Orders / Tickets",
+                    "Gross · Discount · Net",
+                    "Actions",
                   ].map((label) => (
                     <th
                       key={label}
@@ -156,10 +184,8 @@ function EventCampaigns({
                 </tr>
               </thead>
               <tbody>
-                {resource.data.campaigns.map((campaign) => {
-                  const totals = resource.data!.orders
-                    ? campaignTotals(campaign, resource.data!.orders)
-                    : null;
+                {campaigns.map((campaign) => {
+                  const stats = analytics?.get(campaign.id);
                   return (
                     <tr
                       key={campaign.id}
@@ -173,22 +199,12 @@ function EventCampaigns({
                         <div className="mt-sm">
                           <Badge
                             variant={
-                              activeCampaign(campaign, resource.data!.asOf)
+                              campaign.state === "active"
                                 ? "success"
                                 : "neutral"
                             }
                           >
-                            {!campaign.enabled
-                              ? "Disabled"
-                              : campaign.redemption_count >=
-                                  campaign.max_redemptions
-                                ? "Exhausted"
-                                : activeCampaign(campaign, resource.data!.asOf)
-                                  ? "Active"
-                                  : Date.parse(campaign.valid_from) >
-                                      resource.data!.asOf
-                                    ? "Scheduled"
-                                    : "Expired"}
+                            {campaignStateLabel(campaign.state)}
                           </Badge>
                         </div>
                         <p className="mt-sm text-text-secondary">
@@ -196,27 +212,68 @@ function EventCampaigns({
                         </p>
                       </td>
                       <td className="px-lg py-lg">
-                        {campaign.discount_type === "percentage"
-                          ? `${campaign.discount_value}%`
-                          : formatKZT(campaign.discount_value)}
+                        <p>{discountLabel(campaign)}</p>
+                        <p className="mt-xs text-text-secondary">
+                          {campaign.applicable_ticket_type_ids?.length
+                            ? `On ${campaign.applicable_ticket_type_ids.map(typeName).join(", ")}`
+                            : "All paid tickets"}
+                        </p>
                       </td>
+                      <td className="px-lg py-lg">{campaign.visit_count}</td>
                       <td className="px-lg py-lg">
                         {campaign.redemption_count} / {campaign.max_redemptions}
-                      </td>
-                      <td className="whitespace-nowrap px-lg py-lg">
-                        {totals ? formatKZT(totals.discount) : "—"}
-                      </td>
-                      <td className="whitespace-nowrap px-lg py-lg">
-                        {totals ? formatKZT(totals.revenue) : "—"}
+                        {campaign.held_redemptions > 0 && (
+                          <p className="mt-xs text-text-secondary">
+                            {campaign.held_redemptions} in checkout
+                          </p>
+                        )}
                       </td>
                       <td className="px-lg py-lg">
-                        <Button
-                          variant="outlined"
-                          className="text-label"
-                          onClick={() => setQr(campaign)}
-                        >
-                          Campaign QR / Link
-                        </Button>
+                        {stats
+                          ? `${stats.orders} / ${stats.tickets_sold}`
+                          : "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-lg py-lg">
+                        {stats ? (
+                          <>
+                            <p>{formatKZT(stats.gross_revenue_minor)}</p>
+                            <p className="text-text-secondary">
+                              −{formatKZT(stats.discount_minor)}
+                            </p>
+                            <p className="font-medium">
+                              {formatKZT(stats.net_revenue_minor)}
+                            </p>
+                          </>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-lg py-md">
+                        <div className="flex flex-wrap gap-sm">
+                          <Button
+                            variant="outlined"
+                            className="text-label"
+                            onClick={() => setQr(campaign)}
+                          >
+                            QR / Link
+                          </Button>
+                          <Button
+                            variant="text"
+                            className="px-sm text-label"
+                            onClick={() => setEditing(campaign)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="text"
+                            className="px-sm text-label"
+                            loading={toggling === campaign.id}
+                            loadingLabel="Saving"
+                            onClick={() => toggle(campaign)}
+                          >
+                            {campaign.enabled ? "Disable" : "Enable"}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -234,34 +291,82 @@ function EventCampaigns({
         </div>
       </Card>
       <p className="text-label text-text-secondary">
-        Discount value and attributed revenue sum confirmed server orders only.
-        Revenue includes processing fees; refunded, pending, and failed orders
-        are excluded. All payments are simulated. Redemption counts come from
-        the campaign record.
+        Figures come from confirmed BiletFlow orders: gross is the ticket
+        subtotal, net is gross minus the promo discount (processing fees
+        excluded). Refunded, pending, and failed orders are excluded. Visits
+        count Campaign QR and link openings. All payments are simulated.
       </p>
       {creating && (
         <CampaignForm
           event={event}
           onClose={() => setCreating(false)}
-          onCreated={(campaign) => {
+          onSaved={(campaign) => {
             setCreating(false);
             setQr(campaign);
             resource.retry();
           }}
         />
-      )}{" "}
+      )}
+      {editing && (
+        <CampaignForm
+          event={event}
+          campaign={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            resource.retry();
+          }}
+        />
+      )}
       {qr && <CampaignQr campaign={qr} onClose={() => setQr(null)} />}
     </>
   );
 }
-function CampaignForm({
+function TicketTypeChoices({
   event,
-  onClose,
-  onCreated,
+  selected,
+  disabled,
 }: {
   event: Event;
+  selected: string[] | null;
+  disabled: boolean;
+}) {
+  const paid = event.available_ticket_types.filter(
+    (type) => type.kind === "paid",
+  );
+  if (!paid.length) return null;
+  return (
+    <fieldset className="space-y-sm">
+      <legend className="text-label font-medium">Applies to</legend>
+      <p className="text-label text-text-secondary">
+        Leave all unchecked to discount every paid ticket type.
+      </p>
+      {paid.map((type) => (
+        <label key={type.id} className="flex items-center gap-sm text-label">
+          <input
+            type="checkbox"
+            name="types"
+            value={type.id}
+            defaultChecked={selected?.includes(type.id) ?? false}
+            disabled={disabled}
+          />
+          {type.name} · {formatKZT(type.price_minor)}
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+function CampaignForm({
+  event,
+  campaign,
+  onClose,
+  onSaved,
+}: {
+  event: Event;
+  /** Present when editing; code and discount are fixed after creation. */
+  campaign?: PromotionalCampaign;
   onClose: () => void;
-  onCreated: (campaign: PromotionalCampaign) => void;
+  onSaved: (campaign: PromotionalCampaign) => void;
 }) {
   const [kind, setKind] = useState<"percentage" | "fixed_kzt">("percentage");
   const [busy, setBusy] = useState(false);
@@ -277,6 +382,23 @@ function CampaignForm({
       const end = kazakhstanTime(String(form.get("until")));
       if (end <= start)
         throw new Error("The campaign must end after it starts.");
+      const limit = Number(form.get("maximum"));
+      if (!Number.isSafeInteger(limit) || limit < 1)
+        throw new Error(
+          "The redemption limit must be a positive whole number.",
+        );
+      const types = form.getAll("types").map(String);
+      const shared = {
+        name: String(form.get("name")).trim(),
+        valid_from: start,
+        valid_until: end,
+        max_redemptions: limit,
+        applicable_ticket_type_ids: types.length ? types : null,
+      };
+      if (campaign) {
+        onSaved(await updateCampaign(event.id, campaign.id, shared));
+        return;
+      }
       const value =
         kind === "fixed_kzt"
           ? parseKZT(String(form.get("discount")))
@@ -289,33 +411,31 @@ function CampaignForm({
         throw new Error(
           "Use a whole percentage from 1 to 100 or a positive KZT amount.",
         );
-      const limit = Number(form.get("maximum"));
-      if (!Number.isSafeInteger(limit) || limit < 1)
-        throw new Error(
-          "The redemption limit must be a positive whole number.",
-        );
       const body = {
-        name: String(form.get("name")).trim(),
+        ...shared,
         code: String(form.get("code")).trim().toUpperCase(),
         discount_type: kind,
         discount_value: value,
-        valid_from: start,
-        valid_until: end,
-        max_redemptions: limit,
       };
       const signature = JSON.stringify(body);
       if (request.current?.signature !== signature)
         request.current = { signature, key: crypto.randomUUID() };
-      onCreated(await createCampaign(event.id, body, request.current.key));
+      onSaved(await createCampaign(event.id, body, request.current.key));
     } catch (error) {
       setError(error);
       setBusy(false);
     }
   }
   return (
-    <Modal title="Create Promo Campaign" busy={busy} onClose={onClose}>
+    <Modal
+      title={campaign ? `Edit ${campaign.code}` : "Create Promo Campaign"}
+      busy={busy}
+      onClose={onClose}
+    >
       <p className="text-label text-text-secondary">
         For {event.title} · Validity times use UTC+05:00.
+        {campaign &&
+          ` The code and ${discountLabel(campaign)} discount cannot change; disable this campaign and create a new one instead.`}
       </p>
       {!!error && <ErrorState error={error} />}
       <form onSubmit={submit} className="space-y-md">
@@ -323,47 +443,61 @@ function CampaignForm({
           label="Campaign name"
           name="name"
           required
-          maxLength={200}
+          minLength={2}
+          maxLength={150}
+          defaultValue={campaign?.name}
           disabled={busy}
         />
-        <Input
-          label="Promo code"
-          name="code"
-          required
-          minLength={3}
-          maxLength={40}
-          pattern="[A-Za-z0-9_-]{3,40}"
-          helperText="A unique code, such as CAMPUS20."
-          disabled={busy}
-        />
-        <Select
-          label="Discount type"
-          value={kind}
-          onChange={(event) => setKind(event.target.value as typeof kind)}
-          disabled={busy}
-        >
-          <option value="percentage">Percentage</option>
-          <option value="fixed_kzt">Fixed KZT</option>
-        </Select>
-        <Input
-          key={kind}
-          label={kind === "percentage" ? "Discount (%)" : "Discount (KZT)"}
-          name="discount"
-          type={kind === "percentage" ? "number" : "text"}
-          inputMode="decimal"
-          min={kind === "percentage" ? 1 : undefined}
-          max={kind === "percentage" ? 100 : undefined}
-          step={kind === "percentage" ? 1 : undefined}
-          required
-          disabled={busy}
-        />
+        {!campaign && (
+          <>
+            <Input
+              label="Promo code"
+              name="code"
+              required
+              minLength={3}
+              maxLength={40}
+              pattern="[A-Za-z0-9_-]{3,40}"
+              helperText="A unique code, such as CAMPUS20."
+              disabled={busy}
+            />
+            <Select
+              label="Discount type"
+              value={kind}
+              onChange={(event) => setKind(event.target.value as typeof kind)}
+              disabled={busy}
+            >
+              <option value="percentage">Percentage</option>
+              <option value="fixed_kzt">Fixed KZT</option>
+            </Select>
+            <Input
+              key={kind}
+              label={kind === "percentage" ? "Discount (%)" : "Discount (KZT)"}
+              name="discount"
+              type={kind === "percentage" ? "number" : "text"}
+              inputMode="decimal"
+              min={kind === "percentage" ? 1 : undefined}
+              max={kind === "percentage" ? 100 : undefined}
+              step={kind === "percentage" ? 1 : undefined}
+              required
+              disabled={busy}
+            />
+          </>
+        )}
         <Input
           label="Maximum redemptions"
           name="maximum"
           type="number"
-          min={1}
+          min={
+            campaign
+              ? Math.max(
+                  1,
+                  campaign.redemption_count + campaign.held_redemptions,
+                )
+              : 1
+          }
           step={1}
           required
+          defaultValue={campaign?.max_redemptions}
           disabled={busy}
         />
         <Input
@@ -371,6 +505,9 @@ function CampaignForm({
           name="from"
           type="datetime-local"
           required
+          defaultValue={
+            campaign ? localDateInput(campaign.valid_from) : undefined
+          }
           disabled={busy}
         />
         <Input
@@ -378,10 +515,18 @@ function CampaignForm({
           name="until"
           type="datetime-local"
           required
+          defaultValue={
+            campaign ? localDateInput(campaign.valid_until) : undefined
+          }
+          disabled={busy}
+        />
+        <TicketTypeChoices
+          event={event}
+          selected={campaign?.applicable_ticket_type_ids ?? null}
           disabled={busy}
         />
         <Button type="submit" loading={busy} className="w-full">
-          Create campaign & generate link
+          {campaign ? "Save changes" : "Create campaign & generate link"}
         </Button>
       </form>
     </Modal>
@@ -411,10 +556,12 @@ function CampaignQr({
     [campaign],
   );
   const resource = useApiData(load);
+  // The server link is what the QR image encodes; fall back for older records.
   const link =
-    typeof window !== "undefined"
+    campaign.campaign_url ||
+    (typeof window !== "undefined"
       ? campaignUrl(campaign.opaque_token, window.location.origin)
-      : "";
+      : "");
   return (
     <Modal title="Campaign QR Code" onClose={onClose}>
       <div className="rounded-card border border-primary/30 bg-primary/5 p-md text-label">

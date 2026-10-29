@@ -295,6 +295,16 @@ export function EventDetails({
           {!!quote.error && !validationUnavailable && (
             <ErrorState error={quote.error} retry={quote.retry} />
           )}
+          {quote.data?.promo_code && (
+            <p
+              role="status"
+              className="rounded-input border border-success/30 bg-success/10 p-md text-label"
+            >
+              ✓ Code <strong>{quote.data.promo_code}</strong> applied
+              {quote.data.campaign_name ? ` (${quote.data.campaign_name})` : ""}
+              : you save {formatKZT(quote.data.discount_minor)}.
+            </p>
+          )}
           <dl className="space-y-sm text-label">
             <div className="flex justify-between">
               <dt>Tickets</dt>

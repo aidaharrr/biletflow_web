@@ -3,7 +3,8 @@ import { test } from "node:test";
 import {
   activeCampaign,
   aggregateSummaries,
-  campaignTotals,
+  campaignStateLabel,
+  discountLabel,
   campaignUrl,
   eventGroup,
   filterSales,
@@ -21,7 +22,6 @@ import {
 } from "../src/lib/api";
 import type {
   Event,
-  Order,
   OrganizerSummary,
   PromotionalCampaign,
 } from "../src/types/api";
@@ -66,7 +66,7 @@ test("overview percentages weight ticket denominators rather than averaging perc
   assert.equal(totals.gross, 15000);
   assert.equal(aggregateSummaries([]).soldRate, 0);
 });
-test("campaign totals use confirmed attributed orders and exclude unrelated or refunded revenue", () => {
+test("campaign activity, state labels, and links", () => {
   const campaign = {
     id: "promo",
     enabled: true,
@@ -75,31 +75,6 @@ test("campaign totals use confirmed attributed orders and exclude unrelated or r
     redemption_count: 2,
     max_redemptions: 3,
   } as PromotionalCampaign;
-  const orders = [
-    {
-      campaign_id: "promo",
-      status: "confirmed",
-      discount_minor: 1234,
-      total_minor: 9876,
-    },
-    {
-      campaign_id: "promo",
-      status: "refunded",
-      discount_minor: 50000,
-      total_minor: 90000,
-    },
-    {
-      campaign_id: null,
-      status: "confirmed",
-      discount_minor: 222,
-      total_minor: 555,
-    },
-  ] as Order[];
-  assert.deepEqual(campaignTotals(campaign, orders), {
-    discount: 1234,
-    revenue: 9876,
-    orders: 1,
-  });
   assert.equal(activeCampaign(campaign, now), true);
   assert.equal(
     activeCampaign({ ...campaign, redemption_count: 3 }, now),
@@ -111,6 +86,15 @@ test("campaign totals use confirmed attributed orders and exclude unrelated or r
   );
   assert.equal(link.pathname, "/campaign/opaque-token");
   assert.equal(link.search, "");
+  assert.equal(campaignStateLabel("exhausted"), "Exhausted");
+  assert.equal(
+    discountLabel({ discount_type: "percentage", discount_value: 15 }),
+    "15%",
+  );
+  assert.match(
+    discountLabel({ discount_type: "fixed_kzt", discount_value: 500000 }),
+    /5.?000/,
+  );
 });
 test("KZT entry converts decimal strings exactly and rejects unsafe or negative values", () => {
   assert.equal(parseKZT("1500,50"), 150050);

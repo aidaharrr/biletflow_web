@@ -174,8 +174,43 @@ const server = createServer(async (request, response) => {
     Object.assign(event, body);
     return send(event);
   }
-  if (path === "/campaigns/resolve/offer")
-    return send({ event_id: paidId, promo_code: "SAVE20" });
+  if (path.startsWith("/campaigns/resolve/")) {
+    const active = path === "/campaigns/resolve/offer";
+    if (!active && path !== "/campaigns/resolve/expired-offer")
+      return send({ detail: "This promotional link is not valid" }, 404);
+    return send({
+      event_id: paidId,
+      event_title: "Paid Fixture Event",
+      campaign_name: "Fixture offer",
+      state: active ? "active" : "expired",
+      promo_code: active ? "SAVE20" : null,
+      discount_type: "percentage",
+      discount_value: 20,
+      message: active ? null : "Promo code SAVE20 has expired.",
+    });
+  }
+  if (path === "/auth/forgot-password")
+    return send(
+      { message: "If the account exists, we sent an email with instructions." },
+      202,
+    );
+  if (path === "/auth/reset-password") {
+    if (body.token !== "good-reset-token")
+      return send(
+        { detail: "This reset link is invalid, expired, or already used" },
+        400,
+      );
+    response.writeHead(204);
+    return response.end();
+  }
+  if (path === "/auth/verify-email") {
+    if (body.token !== "good-verify-token")
+      return send(
+        { detail: "This verification link is invalid or has expired" },
+        400,
+      );
+    return send({ ...user, email_verified: true });
+  }
   if (path === "/events") {
     if (control.eventError) {
       control.eventError = false;

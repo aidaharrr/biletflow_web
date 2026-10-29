@@ -1,6 +1,7 @@
+import { formatKZT } from "./money";
 import type {
+  CampaignState,
   Event,
-  Order,
   OrganizerSummary,
   PromotionalCampaign,
   SalesPoint,
@@ -41,17 +42,22 @@ export function aggregateSummaries(rows: OrganizerSummary[]) {
     attendanceRate: percentage(checked, sold),
   };
 }
-/** Campaign values use confirmed server order records, never configured discount arithmetic. */
-export function campaignTotals(campaign: PromotionalCampaign, orders: Order[]) {
-  const confirmed = orders.filter(
-    (order) =>
-      order.campaign_id === campaign.id && order.status === "confirmed",
-  );
+export function campaignStateLabel(state: CampaignState | "event_cancelled") {
   return {
-    discount: confirmed.reduce((sum, order) => sum + order.discount_minor, 0),
-    revenue: confirmed.reduce((sum, order) => sum + order.total_minor, 0),
-    orders: confirmed.length,
-  };
+    active: "Active",
+    scheduled: "Scheduled",
+    expired: "Expired",
+    exhausted: "Exhausted",
+    disabled: "Disabled",
+    event_cancelled: "Event cancelled",
+  }[state];
+}
+export function discountLabel(
+  campaign: Pick<PromotionalCampaign, "discount_type" | "discount_value">,
+) {
+  return campaign.discount_type === "percentage"
+    ? `${campaign.discount_value}%`
+    : formatKZT(campaign.discount_value);
 }
 export function activeCampaign(
   campaign: PromotionalCampaign,

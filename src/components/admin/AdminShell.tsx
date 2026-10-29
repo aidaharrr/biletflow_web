@@ -30,6 +30,7 @@ const navigation = [
   ["/admin/organizers", "Organizer reviews"],
   ["/admin/events", "Event moderation"],
   ["/admin/users", "User management"],
+  ["/admin/campaigns", "Promo activity"],
 ];
 export function AdminShell({
   children,
