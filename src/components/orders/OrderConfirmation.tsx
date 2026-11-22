@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Badge, Button, Card } from "@/components/ui";
+import { RequestSupport } from "@/components/support/RequestSupport";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { TicketQr } from "./TicketQr";
@@ -225,6 +226,22 @@ export function OrderConfirmation({ id }: { id: string }) {
           </Button>
         </Card>
       )}
+      <Card className="flex flex-wrap items-center justify-between gap-md">
+        <p className="text-label">
+          Problem with this order, payment or refund? The organizer&apos;s
+          support team will reply under{" "}
+          <Link href="/support" className="underline">
+            Support requests
+          </Link>
+          .
+        </p>
+        <RequestSupport
+          eventId={event.id}
+          eventTitle={event.title}
+          orderId={order.id}
+          label="Request support for this order"
+        />
+      </Card>
       {!!actionError && <ErrorState error={actionError} />}
       <section className="space-y-lg">
         <div className="flex flex-wrap items-center justify-between gap-md">
@@ -283,6 +300,14 @@ export function OrderConfirmation({ id }: { id: string }) {
               >
                 Download / Print PDF Ticket
               </Button>
+              <RequestSupport
+                eventId={event.id}
+                eventTitle={event.title}
+                orderId={order.id}
+                ticketId={ticket.id}
+                label="Report a problem with this ticket"
+                variant="text"
+              />
             </div>
           </Card>
         ))}

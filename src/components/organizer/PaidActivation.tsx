@@ -1,5 +1,11 @@
 "use client";
-import { useCallback, useRef, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Badge, Button, Card, Input } from "@/components/ui";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -28,6 +34,19 @@ export function PaidActivation({
     [eventId],
   );
   const resource = useApiData(load);
+  // Approval happens elsewhere (admin portal), so unlock publishing whenever a
+  // (re)load finds paid sales active, not only right after our own request.
+  // Fire only on a transition into "active": callers may reload on activation
+  // (EventAnalytics passes resource.retry), so firing on every render would loop.
+  const loadedStatus = resource.data?.status;
+  const lastStatus = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!loadedStatus) return;
+    const previous = lastStatus.current;
+    lastStatus.current = loadedStatus;
+    if (loadedStatus === "active" && previous && previous !== "active")
+      onActivated?.();
+  }, [loadedStatus, onActivated]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [terms, setTerms] = useState(false);
@@ -73,7 +92,10 @@ export function PaidActivation({
     return <LoadingSpinner label="Checking paid-sales requirements…" />;
   if (resource.error || !resource.data)
     return <ErrorState error={resource.error} retry={resource.retry} />;
-  const { checklist, status, can_activate } = resource.data;
+  const { checklist, status, can_activate, review_status, review_reason } =
+    resource.data;
+  const awaitingReview =
+    status === "pending_review" || review_status === "pending_review";
   if (status === "active")
     return (
       <section className="space-y-md" aria-label="Paid sales activation">
@@ -101,13 +123,58 @@ export function PaidActivation({
     <section className="space-y-lg" aria-label="Paid sales activation">
       <div className="flex flex-wrap items-center justify-between gap-md">
         <h2 className="text-title">Paid sales activation checklist</h2>
-        <Badge variant="neutral">{status.replace(/_/g, " ")}</Badge>
+        <Badge
+          variant={
+            status === "rejected" || review_status === "changes_required"
+              ? "error"
+              : "neutral"
+          }
+        >
+          {(awaitingReview
+            ? "awaiting admin review"
+            : review_status === "changes_required"
+              ? "changes required"
+              : status
+          ).replace(/_/g, " ")}
+        </Badge>
       </div>
       <p className="text-label text-text-secondary">
         Sandbox verification, payout connection, and activation fees apply to
         this event. No real identity documents, bank details, or payments are
-        required.
+        required. A platform administrator approves each paid event before it
+        can be published.
       </p>
+      {awaitingReview && (
+        <p
+          role="status"
+          className="rounded-input border border-success/30 bg-success/5 p-md text-label"
+        >
+          Submitted for review. A platform administrator must approve this paid
+          event; you can publish it once it is approved.{" "}
+          <button
+            type="button"
+            className="font-medium underline"
+            onClick={resource.retry}
+          >
+            Check approval status
+          </button>
+        </p>
+      )}
+      {(status === "rejected" || review_status === "changes_required") && (
+        <div
+          role="alert"
+          className="space-y-xs rounded-input border border-error/30 bg-error/5 p-md text-label"
+        >
+          <p className="font-medium">
+            {review_status === "changes_required"
+              ? "Event details changed after submission. Submit the updated event for review."
+              : "The administrator rejected this paid event. Address the reason and submit again."}
+          </p>
+          {review_reason && (
+            <p className="whitespace-pre-wrap break-words">{review_reason}</p>
+          )}
+        </div>
+      )}
       {!!error && <ErrorState error={error} />}
       <ul className="grid gap-sm text-label sm:grid-cols-2">
         {Object.entries({
@@ -240,19 +307,29 @@ export function PaidActivation({
       )}
       <Button
         disabled={
-          !!busy || !can_activate || ["active", "suspended"].includes(status)
+          !!busy ||
+          !can_activate ||
+          awaitingReview ||
+          ["active", "suspended"].includes(status)
         }
         loading={busy === "activate"}
         onClick={() =>
           act("activate", async () => {
+            // The backend submits the event for admin review ("pending_review");
+            // "active" is only returned when an approved review is still current.
             const result = await activatePaidSales(eventId, key("activate"));
-            if (result.status !== "active")
-              throw new Error("Paid sales were not activated.");
-            onActivated?.();
+            delete keys.current.activate;
+            if (result.status === "active") onActivated?.();
+            else if (result.status !== "pending_review")
+              throw new Error(
+                "The paid event could not be submitted for review.",
+              );
           })
         }
       >
-        Activate paid sales for this event
+        {awaitingReview
+          ? "Waiting for admin approval"
+          : "Submit paid event for admin review"}
       </Button>
     </section>
   );

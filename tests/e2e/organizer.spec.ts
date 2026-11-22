@@ -190,8 +190,20 @@ test("wizard recovers from missing banners and partial ticket saves, then activa
     .getByRole("button", { name: "Pay simulated activation fee" })
     .click();
   await page
-    .getByRole("button", { name: "Activate paid sales for this event" })
+    .getByRole("button", { name: "Submit paid event for admin review" })
     .click();
+  // Submission is not activation: publishing stays blocked until an admin approves.
+  await expect(
+    page.getByRole("status").filter({ hasText: "Submitted for review" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Waiting for admin approval" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Publish event", exact: true }),
+  ).toBeDisabled();
+  await request.post(`${fixture}/__approve-paid`, { data: { event_id: id } });
+  await page.getByRole("button", { name: "Check approval status" }).click();
   await expect(
     page.getByRole("button", { name: "Publish event", exact: true }),
   ).toBeEnabled();
@@ -372,6 +384,13 @@ test("support keeps unsent replies during refresh, retries failed messages, and 
   await expect(
     page.getByText("Waiting for Customer", { exact: true }),
   ).toHaveCount(2);
+  await page
+    .getByLabel("Assign case to")
+    .selectOption({ label: "Support Agent" });
+  await page.getByRole("button", { name: "Assign", exact: true }).click();
+  await expect(
+    page.getByText("Assigned to Support Agent", { exact: true }),
+  ).toBeVisible();
   await page.screenshot({
     path: "test-results/organizer-support.png",
     fullPage: true,
@@ -388,9 +407,7 @@ test("support keeps unsent replies during refresh, retries failed messages, and 
     page.getByRole("heading", { name: "Sandbox activation help", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText(
-      "Platform staff manage the status of your own support requests.",
-    ),
+    page.getByText("Support staff update the status of your requests."),
   ).toBeVisible();
   await page.setViewportSize({ width: 375, height: 812 });
   expect(

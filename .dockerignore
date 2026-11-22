@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.vercel
+.env*
+!.env.example
+test-results
+playwright-report
+tests
+tsconfig.tsbuildinfo
+Dockerfile
+.dockerignore

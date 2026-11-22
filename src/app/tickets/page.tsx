@@ -7,6 +7,7 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { listOrders, getEvent } from "@/lib/api";
 import { formatKZT } from "@/lib/money";
+import { RequestSupport } from "@/components/support/RequestSupport";
 import { useApiData } from "@/hooks/useApiData";
 
 export default function MyTicketsPage() {
@@ -57,6 +58,9 @@ export default function MyTicketsPage() {
           <p className="text-text-secondary">
             {user.full_name} · {user.email}
           </p>
+          <Link href="/support" className="inline-block text-label underline">
+            My support requests
+          </Link>
         </div>
         <Button
           variant="outlined"
@@ -96,12 +100,21 @@ export default function MyTicketsPage() {
                 {event?.venue.name}
               </p>
               <p className="font-medium">{formatKZT(order.total_minor)}</p>
-              <Link
-                href={`/orders/${order.id}`}
-                className="inline-block font-medium underline"
-              >
-                View order and tickets →
-              </Link>
+              <div className="flex flex-wrap items-center gap-md">
+                <Link
+                  href={`/orders/${order.id}`}
+                  className="inline-block font-medium underline"
+                >
+                  View order and tickets →
+                </Link>
+                <RequestSupport
+                  eventId={order.event_id}
+                  eventTitle={event?.title}
+                  orderId={order.id}
+                  label="Get help"
+                  variant="text"
+                />
+              </div>
             </Card>
           ))}
         </div>

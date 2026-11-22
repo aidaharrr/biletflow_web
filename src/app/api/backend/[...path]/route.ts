@@ -16,16 +16,17 @@ async function proxy(
     return new Response(null, { status: 404 });
   const route = path.join("/");
   const allowed: Record<string, RegExp> = {
-    GET: /^(events(?:\/[^/]+(?:\/(ticket-types|orders|history|paid-sales|campaigns)(?:\/[^/]+(?:\/qr)?)?)?)?|orders(?:\/[^/]+)?|tickets(?:\/[^/]+(?:\/(qr|pdf))?)?|campaigns\/resolve\/[^/]+|organizer\/events|organizer\/analytics\/(summary|sales-series|ticket-types|campaigns|attendance)|support\/cases(?:\/[^/]+\/messages)?)$/,
-    POST: /^(events(?:\/[^/]+\/(publish|unpublish|cancel|duplicate|images|ticket-types|campaigns|paid-sales\/(accept-terms|activation-fee|activate)))?|orders\/[^/]+\/(refunds|resend-confirmation)|checkout\/sessions(?:\/[^/]+\/(complete|cancel))?|promo-codes\/validate|organizer-profile\/verification\/submit|support\/cases(?:\/[^/]+\/messages)?)$/,
+    GET: /^(events(?:\/[^/]+(?:\/(ticket-types|orders|history|paid-sales|campaigns|inventory|staff)(?:\/[^/]+(?:\/qr)?)?)?)?|orders(?:\/[^/]+)?|tickets(?:\/[^/]+(?:\/(qr|pdf))?)?|campaigns\/resolve\/[^/]+|organizer\/events|organizer\/analytics\/(summary|sales-series|ticket-types|campaigns|attendance)|organizer-applications\/me|support\/cases(?:\/[^/]+\/(messages|assignees))?|support\/events\/[^/]+\/staff)$/,
+    POST: /^(events(?:\/[^/]+\/(publish|unpublish|cancel|duplicate|images|ticket-types|campaigns|staff|paid-sales\/(accept-terms|activation-fee|activate)|ticket-types\/[^/]+\/(hide|restore)))?|orders\/[^/]+\/(refunds|resend-confirmation)|checkout\/sessions(?:\/[^/]+\/(complete|cancel))?|promo-codes\/validate|organizer-applications|organizer-profile\/verification\/submit|support\/cases(?:\/[^/]+\/messages)?|support\/events\/[^/]+\/staff)$/,
     PUT: /^organizer-profile(?:\/payout-account)?$/,
     PATCH:
-      /^(events\/[^/]+(?:\/campaigns\/[^/]+)?|support\/cases\/[^/]+\/status)$/,
+      /^(events\/[^/]+(?:\/(campaigns|ticket-types)\/[^/]+)?|support\/cases\/[^/]+\/(status|assignee))$/,
+    DELETE: /^(support\/)?events\/[^/]+\/staff\/[^/]+$/,
   };
   const adminRead =
-    /^admin\/(users|events|campaigns|organizer-applications|support\/cases|reports\/operations)$/;
+    /^admin\/(users|events|campaigns|organizer-applications|paid-event-applications|support\/cases|reports\/operations|email\/status)$/;
   const adminWrite =
-    /^admin\/(organizer-applications\/[^/]+\/(approve|reject)|events\/[^/]+\/suspend|users\/[^/]+\/(suspend|revoke-access))$/;
+    /^admin\/(organizer-applications\/[^/]+\/(approve|reject)|paid-event-applications\/[^/]+\/(approve|reject)|events\/[^/]+\/suspend|users\/[^/]+\/(suspend|revoke-access)|email\/test)$/;
   const adminAllowed =
     request.method === "GET"
       ? adminRead.test(route)
@@ -194,3 +195,4 @@ export const GET = proxy;
 export const POST = proxy;
 export const PUT = proxy;
 export const PATCH = proxy;
+export const DELETE = proxy;

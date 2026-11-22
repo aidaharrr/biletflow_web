@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { Badge, Button, Card, Modal, StatCard } from "@/components/ui";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useAdmin } from "@/components/admin/AdminShell";
+import { EmailDiagnosticsCard } from "@/components/admin/EmailDiagnostics";
 import { AdminErrorState, AdminHeader } from "@/components/admin/AdminStates";
 import { useApiData } from "@/hooks/useApiData";
 import { dateLabel } from "@/lib/organizer";
@@ -237,6 +238,7 @@ export default function AdminDashboard() {
           )}
         </Modal>
       )}
+      {mode === "live" && <EmailDiagnosticsCard />}
     </>
   );
 }

@@ -41,14 +41,29 @@ export function createOrganizerFixture({
       activation_fee_paid: !!event.activation_fee_paid,
       terms_accepted: !!event.terms_accepted,
     };
+    const review = event.paid_review_status ?? "not_submitted";
     return {
       status: event.paid_sales_status,
       checklist: items,
-      can_activate: Object.values(items).every(Boolean),
+      // Mirrors the backend: submission is blocked while a review is pending/approved.
+      can_activate:
+        Object.values(items).every(Boolean) &&
+        !["pending_review", "approved"].includes(review),
+      review_status: review,
+      review_reason: "",
       is_simulation: true,
     };
   };
   return function handle({ path, url, request, response, body, send }) {
+    // Test hook standing in for a platform admin approving the paid event.
+    if (path === "/__approve-paid") {
+      const event = events.find((item) => item.id === body.event_id);
+      if (!event) return (send({ detail: "Event not found" }, 404), true);
+      event.paid_review_status = "approved";
+      event.paid_sales_status = "active";
+      send({ status: "approved", paid_sales_status: "active" });
+      return true;
+    }
     if (path === "/__organizer-seed") {
       const event = events[0];
       const campaign = {
@@ -365,8 +380,10 @@ export function createOrganizerFixture({
             409,
           );
         else {
-          event.paid_sales_status = "active";
-          send({ status: "active", is_simulation: true });
+          // Real backend (fb0a374): activation submits the event for admin review.
+          event.paid_sales_status = "pending_review";
+          event.paid_review_status = "pending_review";
+          send({ status: "pending_review", is_simulation: true });
         }
       } else send({ detail: "Not Found" }, 404);
       return true;
@@ -617,6 +634,28 @@ export function createOrganizerFixture({
           updated_at: stamp(),
         });
         send(supportCase, 201);
+      }
+      return true;
+    }
+    // Mirrors app/support/router.py: the organizer plus authorized support agents.
+    if (/^\/support\/cases\/[^/]+\/(assignees|assignee)$/.test(path)) {
+      const supportCase = cases.find((item) => item.id === parts[3]);
+      const people = [
+        { id: user.id, name: user.full_name ?? user.email },
+        { id: "77777777-7777-4777-8777-777777777777", name: "Support Agent" },
+      ];
+      if (!supportCase) send({ detail: "Not Found" }, 404);
+      else if (parts[4] === "assignees") send(people);
+      else {
+        const person = people.find((item) => item.id === body.user_id);
+        if (body.user_id && !person)
+          send({ detail: "Assignee is outside this support queue" }, 403);
+        else {
+          supportCase.assigned_to = person?.id ?? null;
+          supportCase.assignee_name = person?.name ?? null;
+          supportCase.updated_at = stamp();
+          send(supportCase);
+        }
       }
       return true;
     }

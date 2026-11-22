@@ -29,6 +29,9 @@ import type {
   SupportMessage,
   SupportStatus,
   SupportCaseWrite,
+  SupportPerson,
+  EventInventory,
+  StaffAssignmentResult,
   AdminApi,
   AdminDashboardData,
   AdminEvent,
@@ -40,6 +43,9 @@ import type {
   AdminUser,
   AdminUserSuspensionResult,
   OrganizerApplication,
+  OrganizerApplicationRecord,
+  OrganizerApplicationWrite,
+  PaidEventApplication,
 } from "@/types/api";
 import { isActiveEvent } from "./admin";
 
@@ -495,18 +501,93 @@ export function getAdminEvents(
 ) {
   return collection<AdminEvent>("/admin/events", options, client);
 }
+/** The live backend returns application records; the admin UI uses one review shape. */
+export function toOrganizerApplication(
+  item: OrganizerApplication | OrganizerApplicationRecord,
+): OrganizerApplication {
+  if (!("contact_name" in item)) return item;
+  return {
+    id: item.id,
+    user_id: item.user_id,
+    applicant_name: item.contact_name || item.applicant_name || "Applicant",
+    email: item.email ?? "",
+    organization_name: item.organization_name,
+    contact_phone: item.contact_phone,
+    description: item.description,
+    requested_event_id: null,
+    requested_event_title: null,
+    profile: null,
+    sandbox_identity_reference: null,
+    sandbox_payout_reference: null,
+    terms_accepted: false,
+    activation_fee_paid: false,
+    status: item.status,
+    rejection_reason: null,
+    reviewed_at: item.status === "pending" ? null : item.updated_at,
+    created_at: item.created_at,
+  };
+}
+export function getMyOrganizerApplication(
+  options: ApiRequestOptions = {},
+  client = getAttendeeClient(),
+) {
+  return client.get<OrganizerApplicationRecord | null>(
+    "/organizer-applications/me",
+    options,
+  );
+}
+export function submitOrganizerApplication(
+  body: OrganizerApplicationWrite,
+  key: string,
+  client = getAttendeeClient(),
+) {
+  return client.post<OrganizerApplicationRecord>(
+    "/organizer-applications",
+    body,
+    { idempotencyKey: key },
+  );
+}
 export async function getOrganizerApplications(
   options: ApiRequestOptions = {},
   client = getAttendeeClient(),
 ) {
   try {
-    return await collection<OrganizerApplication>(
-      "/admin/organizer-applications",
-      options,
-      client,
-    );
+    const items = await collection<
+      OrganizerApplication | OrganizerApplicationRecord
+    >("/admin/organizer-applications", options, client);
+    return items.map(toOrganizerApplication);
   } catch (error) {
     return adminMissingRoute(error, "Organizer application review");
+  }
+}
+export async function getPaidEventApplications(
+  options: ApiRequestOptions = {},
+  client = getAttendeeClient(),
+) {
+  try {
+    return await client.get<PaidEventApplication[]>(
+      "/admin/paid-event-applications",
+      options,
+    );
+  } catch (error) {
+    return adminMissingRoute(error, "Paid event review");
+  }
+}
+export async function decidePaidEventApplication(
+  eventId: string,
+  decision: "approve" | "reject",
+  reason: string,
+  key: string,
+  client = getAttendeeClient(),
+) {
+  try {
+    return await client.post<{ status: string }>(
+      `/admin/paid-event-applications/${encodeURIComponent(eventId)}/${decision}`,
+      { reason },
+      { idempotencyKey: key },
+    );
+  } catch (error) {
+    return adminMissingRoute(error, "Paid event decision");
   }
 }
 export async function getPendingOrganizers(
@@ -1028,4 +1109,138 @@ export function updateSupportStatus(
     undefined,
     { params: { status } },
   );
+}
+export function listCaseAssignees(
+  id: string,
+  options: ApiRequestOptions = {},
+  client = getAttendeeClient(),
+) {
+  return client.get<SupportPerson[]>(
+    `/support/cases/${encodeURIComponent(id)}/assignees`,
+    options,
+  );
+}
+/** null unassigns the case. */
+export function assignSupportCase(
+  id: string,
+  userId: string | null,
+  client = getAttendeeClient(),
+) {
+  return client.patch<SupportCase>(
+    `/support/cases/${encodeURIComponent(id)}/assignee`,
+    { user_id: userId },
+  );
+}
+/** Members authorized to handle this event's attendee support cases. */
+export function listSupportStaff(
+  eventId: string,
+  options: ApiRequestOptions = {},
+  client = getAttendeeClient(),
+) {
+  return client.get<SupportPerson[]>(
+    `/support/events/${encodeURIComponent(eventId)}/staff`,
+    options,
+  );
+}
+export function grantSupportStaff(
+  eventId: string,
+  email: string,
+  client = getAttendeeClient(),
+) {
+  return client.post<SupportPerson>(
+    `/support/events/${encodeURIComponent(eventId)}/staff`,
+    { email },
+  );
+}
+export function revokeSupportStaff(
+  eventId: string,
+  userId: string,
+  client = getAttendeeClient(),
+) {
+  return client.delete<{ status: string }>(
+    `/support/events/${encodeURIComponent(eventId)}/staff/${encodeURIComponent(userId)}`,
+  );
+}
+/** Grants check-in (mobile scanner) access for one event to a registered user. */
+export function assignCheckInStaff(
+  eventId: string,
+  email: string,
+  client = getAttendeeClient(),
+) {
+  return client.post<StaffAssignmentResult>(
+    `/events/${encodeURIComponent(eventId)}/staff`,
+    undefined,
+    { params: { email: email.trim().toLowerCase() } },
+  );
+}
+export function updateTicketType(
+  eventId: string,
+  id: string,
+  body: TicketTypeWrite,
+  client = getAttendeeClient(),
+) {
+  return client.patch<TicketType>(
+    `/events/${encodeURIComponent(eventId)}/ticket-types/${encodeURIComponent(id)}`,
+    body,
+  );
+}
+export function setTicketTypeHidden(
+  eventId: string,
+  id: string,
+  hidden: boolean,
+  client = getAttendeeClient(),
+) {
+  return client.post<TicketType>(
+    `/events/${encodeURIComponent(eventId)}/ticket-types/${encodeURIComponent(id)}/${hidden ? "hide" : "restore"}`,
+  );
+}
+export function getEventInventory(
+  eventId: string,
+  options: ApiRequestOptions = {},
+  client = getAttendeeClient(),
+) {
+  return client.get<EventInventory>(
+    `/events/${encodeURIComponent(eventId)}/inventory`,
+    options,
+  );
+}
+export function listCheckInStaff(
+  eventId: string,
+  options: ApiRequestOptions = {},
+  client = getAttendeeClient(),
+) {
+  return client.get<StaffAssignmentResult[]>(
+    `/events/${encodeURIComponent(eventId)}/staff`,
+    options,
+  );
+}
+export function removeCheckInStaff(
+  eventId: string,
+  userId: string,
+  client = getAttendeeClient(),
+) {
+  return client.delete<{ status: string }>(
+    `/events/${encodeURIComponent(eventId)}/staff/${encodeURIComponent(userId)}`,
+  );
+}
+export interface EmailDiagnostics {
+  backend: string;
+  sender: string;
+  problems: string[];
+  to?: string;
+  delivered?: boolean;
+  detail?: string;
+}
+/** Email provider configuration problems (no secrets). Platform admins only. */
+export function getEmailStatus(
+  options: ApiRequestOptions = {},
+  client = getAttendeeClient(),
+) {
+  return client.get<EmailDiagnostics>("/admin/email/status", options);
+}
+/** Sends a test email synchronously and returns the provider's real answer. */
+export function sendTestEmail(to: string | null, client = getAttendeeClient()) {
+  return client.post<EmailDiagnostics>("/admin/email/test", {
+    to: to || null,
+  });
 }

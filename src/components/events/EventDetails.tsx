@@ -7,6 +7,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { EventBanner } from "./EventBanner";
 import { CheckoutModal } from "./CheckoutModal";
+import { RequestSupport } from "@/components/support/RequestSupport";
 import {
   getEvent,
   listTicketTypes,
@@ -143,6 +144,14 @@ export function EventDetails({
           <Card className="space-y-sm">
             <h2 className="text-title">Your host</h2>
             <p>{event.organizer_name || "Event organizer"}</p>
+            <p className="text-label text-text-secondary">
+              Questions about this event? Message the organizer.
+            </p>
+            <RequestSupport
+              eventId={event.id}
+              eventTitle={event.title}
+              label="Contact organizer support"
+            />
           </Card>
           <section className="space-y-md">
             <h2 className="text-title">Where to meet</h2>

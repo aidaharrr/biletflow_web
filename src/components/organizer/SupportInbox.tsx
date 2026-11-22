@@ -14,7 +14,9 @@ import {
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import {
+  assignSupportCase,
   createSupportCase,
+  listCaseAssignees,
   listOrganizerEvents,
   listSupportCases,
   listSupportMessages,
@@ -23,6 +25,7 @@ import {
 } from "@/lib/api";
 import { dateLabel } from "@/lib/organizer";
 import { usePollingData } from "@/hooks/usePollingData";
+import { useApiData } from "@/hooks/useApiData";
 import type {
   Event,
   SupportCase,
@@ -35,17 +38,14 @@ const statuses: { value: SupportStatus; label: string }[] = [
   { value: "waiting_for_customer", label: "Waiting for Customer" },
   { value: "resolved", label: "Resolved" },
 ];
-const categories: SupportCategory[] = [
-  "ticket_delivery",
-  "payment",
-  "refund",
-  "seating",
-  "event_information",
-  "check_in",
+/** Organizer-to-platform requests (backend PLATFORM categories). */
+const platformCategories: SupportCategory[] = [
   "account",
+  "activation",
+  "payment",
   "technical",
 ];
-const statusLabel = (value: SupportStatus) =>
+export const statusLabel = (value: SupportStatus) =>
   statuses.find((status) => status.value === value)?.label ?? value;
 export function SupportInbox({
   eventId = "",
@@ -161,14 +161,23 @@ export function SupportInbox({
                 </span>
                 <span className="mt-sm block text-label text-text-secondary">
                   {events.find((event) => event.id === item.event_id)?.title ??
+                    item.event_title ??
                     "Account / platform support"}
                 </span>
-                <span className="mt-sm block">
+                <span className="mt-sm flex flex-wrap gap-sm">
                   <Badge
                     variant={item.status === "resolved" ? "success" : "neutral"}
                   >
                     {statusLabel(item.status)}
                   </Badge>
+                  {item.flow === "organizer_platform" && (
+                    <Badge>Platform request</Badge>
+                  )}
+                </span>
+                <span className="mt-sm block text-label text-text-secondary">
+                  {item.assignee_name
+                    ? `Assigned to ${item.assignee_name}`
+                    : "Unassigned"}
                 </span>
                 <span className="mt-sm block text-label text-text-secondary">
                   {dateLabel(item.updated_at)}
@@ -220,7 +229,7 @@ export function SupportInbox({
     </>
   );
 }
-function SupportThread({
+export function SupportThread({
   supportCase,
   event,
   onUpdated,
@@ -265,7 +274,8 @@ function SupportThread({
       setBusy(false);
     }
   }
-  const mayUpdate = user?.id !== supportCase.requester_id;
+  const mayUpdate =
+    supportCase.can_manage ?? user?.id !== supportCase.requester_id;
   return (
     <Card className="min-w-0 space-y-lg">
       <header className="space-y-md">
@@ -278,13 +288,27 @@ function SupportThread({
           </Badge>
         </div>
         <p className="break-all text-label text-text-secondary">
-          Case {supportCase.id} · {supportCase.category.replace(/_/g, " ")}
+          Case {supportCase.number ?? supportCase.id} ·{" "}
+          {supportCase.category.replace(/_/g, " ")} ·{" "}
+          {supportCase.assignee_name
+            ? `assigned to ${supportCase.assignee_name}`
+            : "unassigned"}
         </p>
         <div className="flex flex-wrap gap-md text-label">
-          {event && (
+          {event ? (
             <Link href={`/organizer/events/${event.id}`} className="underline">
               Event: {event.title}
             </Link>
+          ) : (
+            supportCase.event_id &&
+            supportCase.event_title && (
+              <Link
+                href={`/events/${supportCase.event_id}`}
+                className="underline"
+              >
+                Event: {supportCase.event_title}
+              </Link>
+            )
           )}
           {supportCase.order_id && (
             <Link
@@ -360,6 +384,9 @@ function SupportThread({
           Send reply
         </Button>
       </form>
+      {mayUpdate && (
+        <CaseAssignment supportCase={supportCase} onUpdated={onUpdated} />
+      )}
       {mayUpdate ? (
         <div className="grid items-end gap-md sm:grid-cols-[1fr_auto]">
           <Select
@@ -397,7 +424,8 @@ function SupportThread({
         </div>
       ) : (
         <p className="text-label text-text-secondary">
-          Platform staff manage the status of your own support requests.
+          Support staff update the status of your requests. Reply here to add
+          details.
         </p>
       )}
     </Card>
@@ -431,6 +459,7 @@ function NewCase({
       const message = String(form.get("message")).trim();
       if (!message) throw new Error("Please describe the issue.");
       const body = {
+        flow: "organizer_platform" as const,
         subject: String(form.get("subject")).trim(),
         category: String(form.get("category")) as SupportCategory,
         message,
@@ -467,7 +496,7 @@ function NewCase({
           defaultValue="technical"
           disabled={busy}
         >
-          {categories.map((category) => (
+          {platformCategories.map((category) => (
             <option key={category} value={category}>
               {category.replace(/_/g, " ")}
             </option>
@@ -504,5 +533,70 @@ function NewCase({
         </Button>
       </form>
     </Modal>
+  );
+}
+
+/** Reassign a case to the organizer, an authorized support agent, or nobody. */
+function CaseAssignment({
+  supportCase,
+  onUpdated,
+}: {
+  supportCase: SupportCase;
+  onUpdated: () => void;
+}) {
+  const load = useCallback(
+    (signal: AbortSignal) => listCaseAssignees(supportCase.id, { signal }),
+    [supportCase.id],
+  );
+  const people = useApiData(load);
+  const [choice, setChoice] = useState(supportCase.assigned_to ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  if (people.loading) return <LoadingSpinner label="Loading support staff…" />;
+  if (people.error || !people.data)
+    return <ErrorState error={people.error} retry={people.retry} />;
+  return (
+    <div className="space-y-sm">
+      <div className="grid items-end gap-md sm:grid-cols-[1fr_auto]">
+        <Select
+          label="Assign case to"
+          value={choice}
+          onChange={(event) => setChoice(event.target.value)}
+          disabled={busy}
+        >
+          <option value="">Unassigned</option>
+          {people.data.map((person) => (
+            <option key={person.id} value={person.id}>
+              {person.name}
+            </option>
+          ))}
+        </Select>
+        <Button
+          variant="outlined"
+          loading={busy}
+          disabled={busy || choice === (supportCase.assigned_to ?? "")}
+          onClick={async () => {
+            setBusy(true);
+            setError(null);
+            try {
+              await assignSupportCase(supportCase.id, choice || null);
+              onUpdated();
+            } catch (error) {
+              setError(error);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          Assign
+        </Button>
+      </div>
+      {supportCase.event_id && (
+        <p className="text-label text-text-secondary">
+          Add support agents from the event page under Event staff.
+        </p>
+      )}
+      {!!error && <ErrorState error={error} />}
+    </div>
   );
 }

@@ -15,6 +15,8 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { EventActions } from "./EventActions";
 import { PaidActivation } from "./PaidActivation";
+import { StaffManager } from "./StaffManager";
+import { TicketTypeManager } from "./TicketTypeManager";
 import {
   ApiError,
   getManagedEvent,
@@ -216,12 +218,14 @@ export function EventAnalytics({ id }: { id: string }) {
               Public event page ↗
             </Link>
           )}
-          {event.status === "draft" && (
+          {["draft", "published"].includes(event.status) && (
             <Link
               href={`/organizer/events/create?draft=${id}`}
               className="underline"
             >
-              Complete or edit this draft
+              {event.status === "draft"
+                ? "Complete or edit this draft"
+                : "Edit event details"}
             </Link>
           )}
         </div>
@@ -607,6 +611,8 @@ export function EventAnalytics({ id }: { id: string }) {
           </Card>
         )}
       </section>
+      <TicketTypeManager event={event} onChanged={resource.retry} />
+      <StaffManager event={event} />
       <section className="space-y-lg">
         <div className="grid items-end gap-md sm:grid-cols-[1fr_260px]">
           <h2 className="text-title">Activity timeline</h2>

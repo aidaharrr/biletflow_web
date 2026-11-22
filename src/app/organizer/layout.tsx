@@ -46,9 +46,17 @@ export default async function OrganizerLayout({
         <Card className="space-y-md">
           <h1 className="text-title">Organizer access required</h1>
           <p>Your account needs the organizer role to manage events.</p>
-          <Link href="/events" className="underline">
-            Return to events
-          </Link>
+          <div className="flex flex-wrap gap-lg">
+            <Link
+              href="/become-organizer"
+              className="font-medium text-primary underline"
+            >
+              Apply to become an organizer
+            </Link>
+            <Link href="/events" className="underline">
+              Return to events
+            </Link>
+          </div>
         </Card>
       </main>
     );

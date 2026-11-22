@@ -172,14 +172,24 @@ export default function AdminOrganizers() {
                     {item.requested_event_title ?? "Organizer profile review"}
                   </td>
                   <td className="px-lg py-lg">
-                    <p className="capitalize">
-                      Identity:{" "}
-                      {item.profile.verification_status.replace(/_/g, " ")}
-                    </p>
-                    <p className="mt-xs text-text-secondary">
-                      Payout:{" "}
-                      {item.profile.payout_verified ? "Verified" : "Pending"}
-                    </p>
+                    {item.profile ? (
+                      <>
+                        <p className="capitalize">
+                          Identity:{" "}
+                          {item.profile.verification_status.replace(/_/g, " ")}
+                        </p>
+                        <p className="mt-xs text-text-secondary">
+                          Payout:{" "}
+                          {item.profile.payout_verified
+                            ? "Verified"
+                            : "Pending"}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-text-secondary">
+                        {item.organization_name ?? "No organization"}
+                      </p>
+                    )}
                   </td>
                   <td className="px-lg py-lg">
                     <Badge
@@ -239,9 +249,9 @@ export default function AdminOrganizers() {
         </div>
       </Card>
       <p className="text-label text-text-secondary">
-        Approval requires verified sandbox identity and payout details, accepted
-        terms, and a simulated activation fee. Each event retains its own
-        paid-sales activation checklist.
+        Approval grants the organizer role. Paid events still need sandbox
+        identity, payout, terms, a simulated activation fee and a separate paid
+        event review before they can sell tickets.
       </p>
       {review && (
         <Modal
@@ -275,13 +285,14 @@ export default function AdminOrganizers() {
               ],
               [
                 "Masked payout account",
-                review.item.profile.payout_account_masked,
+                review.item.profile?.payout_account_masked,
               ],
               [
                 "Sandbox payout reference",
                 review.item.sandbox_payout_reference,
               ],
               ["Requested event", review.item.requested_event_title],
+              ["About the organizer", review.item.description],
             ].map(([label, value]) => (
               <div key={label}>
                 <dt className="text-text-secondary">{label}</dt>

@@ -25,6 +25,14 @@ export const isActiveEvent = (event: AdminEvent, at: number) =>
   !isSuspendedEvent(event) &&
   Date.parse(event.ends_at) > at;
 export function approvalRequirements(application: OrganizerApplication) {
+  // Live applications only carry contact details; paid-sales checks happen per event.
+  if (!application.profile)
+    return {
+      "Contact name supplied": !!application.applicant_name.trim(),
+      "Organization supplied": !!application.organization_name?.trim(),
+      "Contact phone supplied": !!application.contact_phone?.trim(),
+      "Activity description supplied": !!application.description?.trim(),
+    };
   return {
     "Sandbox identity verified":
       application.profile.verification_status === "verified",

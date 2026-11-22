@@ -28,6 +28,7 @@ const AdminContext = createContext<AdminContextState | null>(null);
 const navigation = [
   ["/admin/dashboard", "Overview"],
   ["/admin/organizers", "Organizer reviews"],
+  ["/admin/paid-events", "Paid event reviews"],
   ["/admin/events", "Event moderation"],
   ["/admin/users", "User management"],
   ["/admin/campaigns", "Promo activity"],

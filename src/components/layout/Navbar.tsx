@@ -50,6 +50,22 @@ export function Navbar() {
               Organizer portal
             </Link>
           )}
+          {user &&
+            !user.roles.includes("organizer") &&
+            !user.roles.includes("platform_admin") && (
+              <Link
+                href="/become-organizer"
+                aria-current={
+                  pathname === "/become-organizer" ? "page" : undefined
+                }
+                className={cn(
+                  "py-sm hover:text-primary",
+                  pathname === "/become-organizer" && "text-primary",
+                )}
+              >
+                Become an organizer
+              </Link>
+            )}
           {user?.roles.includes("platform_admin") && (
             <Link
               href="/admin/dashboard"

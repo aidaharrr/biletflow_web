@@ -16,7 +16,20 @@ export type VerificationStatus =
   "not_started" | "pending" | "verified" | "rejected";
 export type EventVisibility = "public" | "unlisted" | "private";
 export type EventStatus = "draft" | "published" | "cancelled" | "completed";
-export type PaidSalesStatus = "not_ready" | "ready" | "active" | "suspended";
+export type PaidSalesStatus =
+  | "not_ready"
+  | "ready"
+  | "pending_review"
+  | "rejected"
+  | "active"
+  | "suspended";
+/** Admin review of a paid event (backend: app/events/paid_applications.py). */
+export type PaidReviewStatus =
+  | "not_submitted"
+  | "pending_review"
+  | "approved"
+  | "rejected"
+  | "changes_required";
 export type OrderStatus =
   | "pending"
   | "confirmed"
@@ -32,6 +45,8 @@ export type RefundStatus = "pending" | "succeeded" | "failed";
 export type SupportStatus =
   "open" | "in_progress" | "waiting_for_customer" | "resolved";
 export type SupportCategory =
+  | "report_event"
+  | "activation"
   | "ticket_delivery"
   | "payment"
   | "refund"
@@ -277,6 +292,27 @@ export interface SupportCase {
   status: SupportStatus;
   created_at: ISODateTime;
   updated_at: ISODateTime;
+  /** Fields below are returned by the live support API (app/support/router.py). */
+  number?: string;
+  flow?: SupportFlow;
+  routing?: "organizer" | "platform";
+  assignee_name?: string | null;
+  event_title?: string | null;
+  can_manage?: boolean;
+}
+export type SupportFlow = "attendee" | "organizer_platform";
+/** A person who can be assigned a case, or an authorized support/staff member. */
+export interface SupportPerson {
+  id: UUID;
+  name: string;
+}
+/** Check-in staff member of an event (GET/POST /events/{id}/staff). */
+export interface StaffAssignmentResult {
+  id: UUID;
+  user_id: UUID;
+  email: string;
+  name: string;
+  permissions: string[];
 }
 
 export interface SupportMessage {
@@ -361,6 +397,21 @@ export interface EventWrite {
   admission_type: "general_admission";
   refund_policy: string;
 }
+/** GET /events/{id}/inventory: every ticket type, hidden ones included. */
+export interface InventoryTicketType extends TicketType {
+  available: number;
+  checked_in: number;
+  /** Only unsold ticket types of draft events can be edited. */
+  editable: boolean;
+}
+export interface EventInventory {
+  event_status: EventStatus;
+  registration_opens_at: ISODateTime;
+  registration_closes_at: ISODateTime;
+  refund_policy: string;
+  capacity: number;
+  ticket_types: InventoryTicketType[];
+}
 export type TicketTypeWrite = Pick<
   TicketType,
   | "name"
@@ -392,6 +443,33 @@ export interface PaidSalesChecklist {
     terms_accepted: boolean;
   };
   can_activate: boolean;
+  review_status?: PaidReviewStatus;
+  review_reason?: string;
+  is_simulation: boolean;
+}
+export interface PaidEventApplication {
+  event: {
+    id: UUID;
+    title: string;
+    starts_at: string;
+    status: string;
+    paid_sales_status: PaidSalesStatus;
+    refund_policy?: string;
+  };
+  status: PaidReviewStatus;
+  reason: string;
+  submitted_at: string;
+  reviewed_at: string | null;
+  activation_fee_paid: boolean;
+  terms_accepted: boolean;
+  profile: {
+    contact_name: string | null;
+    contact_phone: string | null;
+    organization_name: string | null;
+    payout_account_masked: string | null;
+    verification_status: string;
+    payout_verified: boolean;
+  } | null;
   is_simulation: boolean;
 }
 export interface OrganizerSummary {
@@ -452,6 +530,7 @@ export interface ActivationFeeResult {
   is_simulation: boolean;
 }
 export interface SupportCaseWrite {
+  flow?: SupportFlow;
   subject: string;
   category: SupportCategory;
   message: string;
@@ -472,7 +551,10 @@ export interface OrganizerApplication {
   contact_phone: string | null;
   requested_event_id: UUID | null;
   requested_event_title: string | null;
-  profile: OrganizerProfile;
+  /** Present in demo data; the live backend application has no profile yet. */
+  profile?: OrganizerProfile | null;
+  /** What the applicant organizes (live backend field). */
+  description?: string | null;
   sandbox_identity_reference: string | null;
   sandbox_payout_reference: string | null;
   terms_accepted: boolean;
@@ -482,6 +564,25 @@ export interface OrganizerApplication {
   reviewed_at: ISODateTime | null;
   created_at: ISODateTime;
 }
+/** Backend response of /organizer-applications and /organizer-applications/me. */
+export interface OrganizerApplicationRecord {
+  id: UUID;
+  user_id: UUID;
+  contact_name: string;
+  organization_name: string;
+  contact_phone: string;
+  description: string;
+  status: OrganizerApplicationStatus;
+  created_at: ISODateTime;
+  updated_at: ISODateTime;
+  /** Admin listing only. */
+  email?: string | null;
+  applicant_name?: string | null;
+}
+export type OrganizerApplicationWrite = Pick<
+  OrganizerApplicationRecord,
+  "contact_name" | "organization_name" | "contact_phone" | "description"
+>;
 export interface AdminUser extends User {
   is_active: boolean;
   active_sessions?: number;

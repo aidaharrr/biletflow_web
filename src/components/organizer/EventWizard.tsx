@@ -167,10 +167,15 @@ export function EventWizard({
     return <LoadingSpinner label="Opening your event draft…" />;
   if (resource.error || !resource.data)
     return <ErrorState error={resource.error} retry={resource.retry} />;
-  if (resource.data.draft && resource.data.draft.status !== "draft")
+  if (
+    resource.data.draft &&
+    !["draft", "published"].includes(resource.data.draft.status)
+  )
     return (
       <Card className="space-y-md">
-        <h1 className="text-title">This event is no longer a draft</h1>
+        <h1 className="text-title">
+          This event can no longer be edited ({resource.data.draft.status})
+        </h1>
         <Link
           href={`/organizer/events/${resource.data.draft.id}`}
           className="underline"
@@ -191,6 +196,8 @@ function WizardForm({
   source: Event | null;
 }) {
   const router = useRouter();
+  /** Published events: details only; ticket types are managed on the event page. */
+  const editingLive = draft?.status === "published";
   const [step, setStep] = useState(1);
   const [details, setDetails] = useState<Details>(() =>
     draft ? detailsFrom(draft) : blank,
@@ -253,6 +260,14 @@ function WizardForm({
         event = await createEvent(body, key("event", JSON.stringify(body)));
       savedRef.current = event;
       setSaved(event);
+      if (editingLive) {
+        if (details.banner && details.banner !== bannerSaved.current) {
+          await attachEventImage(event.id, details.banner);
+          bannerSaved.current = details.banner;
+        }
+        router.push(`/organizer/events/${event.id}?updated=1`);
+        return;
+      }
       // Keep the resumable draft URL without remounting and losing a partially saved form.
       window.history.replaceState(
         null,
@@ -389,12 +404,28 @@ function WizardForm({
           Bring your next idea to life
         </p>
         <h1 className="font-brand text-3xl font-semibold">
-          {draft ? "Complete your event draft" : "Create a new event"}
+          {editingLive
+            ? "Edit published event"
+            : draft
+              ? "Complete your event draft"
+              : "Create a new event"}
         </h1>
         <p className="text-label text-text-secondary">
           General admission · Dates and times in Kazakhstan (UTC+05:00)
         </p>
-        {saved && (
+        {editingLive && (
+          <p
+            role="note"
+            className="rounded-input border border-divider bg-background p-md text-label"
+          >
+            This event is live. Saved changes appear immediately and attendees
+            with confirmed orders are notified. Manage ticket types from the
+            event page. Paid events approved by an administrator must be
+            unpublished before their details can change, and then need a new
+            review.
+          </p>
+        )}
+        {saved && !editingLive && (
           <p className="break-all text-label text-text-secondary">
             Saved draft: {saved.id}
           </p>
@@ -402,7 +433,7 @@ function WizardForm({
       </header>
       <ol
         aria-label="Event creation progress"
-        className="grid gap-sm sm:grid-cols-3"
+        className={`grid gap-sm sm:grid-cols-3 ${editingLive ? "hidden" : ""}`}
       >
         {[
           "Event details",
@@ -513,7 +544,7 @@ function WizardForm({
             />
             {saved && (
               <p className="text-label text-text-secondary">
-                Saved drafts retain their venue. Event dates, description,
+                Saved events retain their venue. Event dates, description,
                 capacity, and registration settings can be updated here.
               </p>
             )}
@@ -547,8 +578,16 @@ function WizardForm({
               disabled={busy}
             />
             <Button type="submit" loading={busy}>
-              Save details & continue
+              {editingLive ? "Save changes" : "Save details & continue"}
             </Button>
+            {editingLive && (
+              <Link
+                href={`/organizer/events/${draft.id}`}
+                className="ml-md text-label underline"
+              >
+                Cancel
+              </Link>
+            )}
             {bannerFailed && (
               <div className="space-y-md">
                 <p className="text-label text-text-secondary">
