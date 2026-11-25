@@ -1,0 +1,71 @@
+{
+  "loading": "Loading organizer workspace…",
+  "layout": {
+    "checkFailedTitle": "Unable to check your account",
+    "checkFailedBody": "Please reload when the backend is available.",
+    "unavailableTitle": "Organizer access unavailable",
+    "unavailableBody": "Your account could not be authorized. Please sign in again or contact support.",
+    "requiredTitle": "Organizer access required",
+    "requiredBody": "Your account needs the organizer role to manage events.",
+    "apply": "Apply to become an organizer",
+    "returnToEvents": "Return to events"
+  },
+  "shell": {
+    "signInTitle": "Sign in to your organizer account",
+    "signIn": "Sign in",
+    "accessRequired": "Organizer access required.",
+    "portal": "Organizer portal",
+    "tagline": "Make every event count.",
+    "navLabel": "Organizer navigation",
+    "nav": {
+      "overview": "Overview",
+      "createEvent": "Create event",
+      "campaigns": "Campaigns",
+      "support": "Support inbox"
+    },
+    "yourAccount": "Your account",
+    "sandbox": "Sandbox workspace. Sales and fees are simulated.",
+    "signOut": "Sign out"
+  },
+  "eventStatus": {
+    "draft": "draft",
+    "published": "published",
+    "cancelled": "cancelled",
+    "completed": "completed"
+  },
+  "dashboard": {
+    "loading": "Loading your dashboard…",
+    "eyebrow": "Your events, at a glance",
+    "title": "Dashboard overview",
+    "subtitle": "All managed events · All-time metrics · Demonstration revenue in KZT",
+    "refresh": "Refresh overview",
+    "stats": {
+      "grossLabel": "Total Gross Sales",
+      "grossHelper": "Confirmed order subtotals · Sandbox",
+      "soldLabel": "Tickets Sold vs Capacity",
+      "soldHelper": "{sold} sold / {capacity} ticket capacity",
+      "attendanceLabel": "Check-in Attendance Rate",
+      "attendanceHelper": "{checked} checked in / {sold} valid tickets",
+      "promoLabel": "Active Promo Redemptions",
+      "promoHelper": "Redemptions in currently valid campaigns",
+      "unavailable": "Metrics unavailable"
+    },
+    "createEvent": "Create New Event",
+    "createCampaign": "Create Promo Campaign",
+    "portfolio": "Your event portfolio",
+    "lifecycle": "Event lifecycle",
+    "groupTab": "{group} ({count})",
+    "groupPanel": "{group, select, Upcoming {Upcoming events} Active {Active events} Completed {Completed events} other {Cancelled events}}",
+    "columns": {
+      "event": "Event",
+      "status": "Status",
+      "ticketSales": "Ticket sales",
+      "grossSales": "Gross sales",
+      "actions": "Actions"
+    },
+    "emptyTitle": "{group, select, Upcoming {No upcoming events} Active {No active events} Completed {No completed events} other {No cancelled events}}",
+    "emptyOtherTab": "Choose another lifecycle tab to view your events.",
+    "emptyFirstEvent": "Create your first event to start welcoming attendees.",
+    "footnote": "Drafts appear under Upcoming. Active events are published and currently in progress. Completed and cancelled records remain available."
+  }
+}

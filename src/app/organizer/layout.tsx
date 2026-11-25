@@ -6,6 +6,7 @@ import { backendFetch, SESSION_COOKIE } from "@/lib/server-api";
 import { OrganizerShell } from "@/components/organizer/OrganizerShell";
 import { Card } from "@/components/ui";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 export default async function OrganizerLayout({
   children,
 }: {
@@ -13,6 +14,7 @@ export default async function OrganizerLayout({
 }) {
   if (!(await cookies()).has(SESSION_COOKIE))
     redirect("/login?next=%2Forganizer%2Fdashboard");
+  const t = await getTranslations("organizer.layout");
   let response: Response;
   try {
     response = await backendFetch("users/me");
@@ -20,8 +22,8 @@ export default async function OrganizerLayout({
     return (
       <main className="mx-auto max-w-3xl px-md py-xl">
         <Card>
-          <h1 className="text-title">Unable to check your account</h1>
-          <p className="mt-md">Please reload when the backend is available.</p>
+          <h1 className="text-title">{t("checkFailedTitle")}</h1>
+          <p className="mt-md">{t("checkFailedBody")}</p>
         </Card>
       </main>
     );
@@ -31,11 +33,8 @@ export default async function OrganizerLayout({
     return (
       <main className="mx-auto max-w-3xl px-md py-xl">
         <Card>
-          <h1 className="text-title">Organizer access unavailable</h1>
-          <p className="mt-md">
-            Your account could not be authorized. Please sign in again or
-            contact support.
-          </p>
+          <h1 className="text-title">{t("unavailableTitle")}</h1>
+          <p className="mt-md">{t("unavailableBody")}</p>
         </Card>
       </main>
     );
@@ -44,17 +43,17 @@ export default async function OrganizerLayout({
     return (
       <main className="mx-auto max-w-3xl px-md py-xl">
         <Card className="space-y-md">
-          <h1 className="text-title">Organizer access required</h1>
-          <p>Your account needs the organizer role to manage events.</p>
+          <h1 className="text-title">{t("requiredTitle")}</h1>
+          <p>{t("requiredBody")}</p>
           <div className="flex flex-wrap gap-lg">
             <Link
               href="/become-organizer"
               className="font-medium text-primary underline"
             >
-              Apply to become an organizer
+              {t("apply")}
             </Link>
             <Link href="/events" className="underline">
-              Return to events
+              {t("returnToEvents")}
             </Link>
           </div>
         </Card>

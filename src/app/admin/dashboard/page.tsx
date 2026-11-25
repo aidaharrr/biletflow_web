@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useState } from "react";
+import { useTranslations } from "next-intl";
+import { useErrorText, useIntlLocale, useLabel } from "@/i18n/labels";
 import { Badge, Button, Card, Modal, StatCard } from "@/components/ui";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useAdmin } from "@/components/admin/AdminShell";
@@ -10,6 +12,15 @@ import { useApiData } from "@/hooks/useApiData";
 import { dateLabel } from "@/lib/organizer";
 import type { AdminSupportCase } from "@/types/api";
 export default function AdminDashboard() {
+  const t = useTranslations("admin.dashboard");
+  const tAdmin = useTranslations("admin");
+  const label = useLabel();
+  const errorText = useErrorText();
+  const locale = useIntlLocale();
+  const enumText = (group: "status" | "category", value: string) =>
+    tAdmin.has(`${group}.${value}`)
+      ? tAdmin(`${group}.${value}`)
+      : value.replace(/_/g, " ");
   const { api, mode, revision, href } = useAdmin();
   const [selected, setSelected] = useState<AdminSupportCase | null>(null);
   const load = useCallback(
@@ -20,59 +31,58 @@ export default function AdminDashboard() {
     [api, revision],
   );
   const resource = useApiData(load);
-  if (resource.loading)
-    return <LoadingSpinner label="Loading platform metrics…" />;
+  if (resource.loading) return <LoadingSpinner label={t("loading")} />;
   if (resource.error || !resource.data)
     return <AdminErrorState error={resource.error} retry={resource.retry} />;
   const data = resource.data;
   return (
     <>
       <AdminHeader
-        title="Platform overview"
-        description="Platform-wide account totals, event activity, and moderation queues."
+        title={t("title")}
+        description={t("description")}
         action={
           <Button variant="outlined" onClick={resource.retry}>
-            Refresh metrics
+            {t("refresh")}
           </Button>
         }
       />
       <div className="grid gap-md sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Total Registered Users"
+          label={t("totalUsers")}
           value={data.total_registered_users ?? "—"}
-          helper="All platform accounts, including suspended"
+          helper={t("totalUsersHelper")}
           accent
         />
         <StatCard
-          label="Active Events"
+          label={t("activeEvents")}
           value={data.active_events ?? "—"}
-          helper="Published, visible events that have not ended"
+          helper={t("activeEventsHelper")}
         />
         <StatCard
-          label="Pending Organizer Applications"
+          label={t("pendingApplications")}
           value={data.pending_organizer_applications ?? "—"}
-          helper="Awaiting a platform review decision"
+          helper={t("pendingApplicationsHelper")}
         />
         <StatCard
-          label="Escalated Support Cases"
+          label={t("escalatedCases")}
           value={data.escalated_support_cases ?? "—"}
-          helper="Escalated cases that are not resolved"
+          helper={t("escalatedCasesHelper")}
         />
       </div>
       <p className="text-label text-text-secondary">
-        {mode === "demo" ? "Example report snapshot" : "Metrics checked"}:{" "}
-        {dateLabel(data.as_of)} · UTC+05:00
+        {mode === "demo" ? t("demoSnapshot") : t("metricsChecked")}:{" "}
+        {dateLabel(data.as_of, locale)} · UTC+05:00
       </p>
       {data.issues.length > 0 && (
         <Card className="space-y-md">
-          <h2 className="text-title">Some metrics are unavailable</h2>
+          <h2 className="text-title">{t("metricsUnavailable")}</h2>
           <ul className="space-y-sm text-label text-text-secondary">
             {data.issues.map((issue) => (
               <li key={issue.metric}>
                 <strong className="font-medium text-text-primary">
-                  {issue.metric}:{" "}
+                  {label(issue.metric)}:{" "}
                 </strong>
-                {issue.message}
+                {errorText(issue.message)}
               </li>
             ))}
           </ul>
@@ -80,33 +90,33 @@ export default function AdminDashboard() {
             href="/admin/dashboard?mode=demo"
             className="inline-block font-medium underline"
           >
-            View the complete demo report
+            {t("viewDemoReport")}
           </Link>
         </Card>
       )}
       <section className="space-y-lg">
-        <h2 className="text-title">Moderation queues</h2>
+        <h2 className="text-title">{t("queuesTitle")}</h2>
         <div className="grid gap-lg sm:grid-cols-2">
           {[
             [
               "/admin/organizers",
-              "Review organizer applications",
-              "Inspect sandbox identity, payout readiness, and application decisions.",
+              t("queues.organizersTitle"),
+              t("queues.organizersDescription"),
             ],
             [
               "/admin/events",
-              "Moderate platform events",
-              "Review published events, drafts, and suspended listings.",
+              t("queues.eventsTitle"),
+              t("queues.eventsDescription"),
             ],
             [
               "/admin/users",
-              "Manage user access",
-              "Inspect roles and review account or session restrictions.",
+              t("queues.usersTitle"),
+              t("queues.usersDescription"),
             ],
             [
               "/admin/dashboard#support-queue",
-              "Review escalated support",
-              "Inspect cases requiring platform-level attention.",
+              t("queues.supportTitle"),
+              t("queues.supportDescription"),
             ],
           ].map(([target, title, description]) => (
             <Link
@@ -123,19 +133,18 @@ export default function AdminDashboard() {
         </div>
       </section>
       <section id="support-queue" className="scroll-mt-lg space-y-lg">
-        <h2 className="text-title">Escalated support queue</h2>
+        <h2 className="text-title">{t("supportQueueTitle")}</h2>
         <Card className="overflow-hidden p-0">
           {data.escalated_cases === null ? (
             <div className="space-y-md p-lg">
               <p className="text-label text-text-secondary">
-                The live escalation queue is not available. Cases are not
-                inferred from ordinary support statuses.
+                {t("liveQueueUnavailable")}
               </p>
               <Link
                 href="/admin/dashboard?mode=demo#support-queue"
                 className="inline-block font-medium underline"
               >
-                Preview sample escalations
+                {t("previewEscalations")}
               </Link>
             </div>
           ) : data.escalated_cases.length ? (
@@ -143,17 +152,23 @@ export default function AdminDashboard() {
               <table className="w-full min-w-[620px] text-left text-label">
                 <thead className="border-b border-divider bg-background text-text-secondary">
                   <tr>
-                    {["Case", "Requester", "Status", "Updated", "Review"].map(
-                      (label) => (
-                        <th
-                          key={label}
-                          scope="col"
-                          className="px-lg py-md font-medium"
-                        >
-                          {label}
-                        </th>
-                      ),
-                    )}
+                    {(
+                      [
+                        "case",
+                        "requester",
+                        "status",
+                        "updated",
+                        "review",
+                      ] as const
+                    ).map((column) => (
+                      <th
+                        key={column}
+                        scope="col"
+                        className="px-lg py-md font-medium"
+                      >
+                        {t(`columns.${column}`)}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -165,7 +180,7 @@ export default function AdminDashboard() {
                       <td className="px-lg py-md">
                         <p className="font-medium">{item.subject}</p>
                         <p className="mt-xs capitalize text-text-secondary">
-                          {item.category.replace(/_/g, " ")}
+                          {enumText("category", item.category)}
                         </p>
                       </td>
                       <td className="px-lg py-md">
@@ -173,11 +188,11 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-lg py-md">
                         <Badge className="capitalize">
-                          {item.status.replace(/_/g, " ")}
+                          {enumText("status", item.status)}
                         </Badge>
                       </td>
                       <td className="px-lg py-md">
-                        {dateLabel(item.updated_at)}
+                        {dateLabel(item.updated_at, locale)}
                       </td>
                       <td className="px-lg py-md">
                         <Button
@@ -185,7 +200,7 @@ export default function AdminDashboard() {
                           className="text-label"
                           onClick={() => setSelected(item)}
                         >
-                          Review case
+                          {t("reviewCase")}
                         </Button>
                       </td>
                     </tr>
@@ -195,27 +210,30 @@ export default function AdminDashboard() {
             </div>
           ) : (
             <p className="p-lg text-label text-text-secondary">
-              No unresolved escalated support cases.
+              {t("noCases")}
             </p>
           )}
         </Card>
       </section>
       {selected && (
-        <Modal title="Escalated support case" onClose={() => setSelected(null)}>
+        <Modal title={t("caseModalTitle")} onClose={() => setSelected(null)}>
           <h3 className="text-title">{selected.subject}</h3>
           <Badge className="capitalize">
-            {selected.status.replace(/_/g, " ")}
+            {enumText("status", selected.status)}
           </Badge>
           <p className="text-label text-text-secondary">
-            {selected.escalation_reason ?? "Platform review requested."}
+            {selected.escalation_reason ?? t("defaultEscalationReason")}
           </p>
           <dl className="space-y-md text-label">
             {[
-              ["Case ID", selected.id],
-              ["Requester", selected.requester_name ?? selected.requester_id],
-              ["Event ID", selected.event_id],
-              ["Order ID", selected.order_id],
-              ["Ticket ID", selected.ticket_id],
+              [t("caseId"), selected.id],
+              [
+                t("requester"),
+                selected.requester_name ?? selected.requester_id,
+              ],
+              [t("eventId"), selected.event_id],
+              [t("orderId"), selected.order_id],
+              [t("ticketId"), selected.ticket_id],
             ].map(
               ([label, value]) =>
                 value && (
@@ -233,7 +251,7 @@ export default function AdminDashboard() {
               )}
               className="inline-block font-medium underline"
             >
-              Review contextual event →
+              {t("reviewEvent")}
             </Link>
           )}
         </Modal>

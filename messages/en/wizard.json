@@ -1,0 +1,109 @@
+{
+  "loading": "Opening your event draft…",
+  "locked": {
+    "title": "This event can no longer be edited ({status})",
+    "status": {
+      "draft": "draft",
+      "published": "published",
+      "cancelled": "cancelled",
+      "completed": "completed"
+    },
+    "open": "Open event management"
+  },
+  "header": {
+    "eyebrow": "Bring your next idea to life",
+    "editLive": "Edit published event",
+    "completeDraft": "Complete your event draft",
+    "create": "Create a new event",
+    "subtitle": "General admission · Dates and times in Kazakhstan (UTC+05:00)",
+    "liveNote": "This event is live. Saved changes appear immediately and attendees with confirmed orders are notified. Manage ticket types from the event page. Paid events approved by an administrator must be unpublished before their details can change, and then need a new review.",
+    "savedDraft": "Saved draft: {id}"
+  },
+  "steps": {
+    "ariaLabel": "Event creation progress",
+    "details": "Event details",
+    "tickets": "Ticket configuration",
+    "review": "Review & paid activation"
+  },
+  "details": {
+    "title": "Event title",
+    "category": "Category",
+    "banner": "Banner image URL (optional)",
+    "description": "Event description",
+    "starts": "Event starts",
+    "ends": "Event ends",
+    "opens": "Registration opens",
+    "closes": "Registration closes",
+    "venue": "Venue name",
+    "city": "City",
+    "address": "Venue address",
+    "savedVenueNote": "Saved events retain their venue. Event dates, description, capacity, and registration settings can be updated here.",
+    "capacity": "Event capacity",
+    "visibility": "Event visibility",
+    "refund": "Refund policy"
+  },
+  "categories": {
+    "concerts": "Concerts",
+    "tech": "Tech",
+    "student": "Student",
+    "sports": "Sports"
+  },
+  "visibility": {
+    "public": "Public",
+    "unlisted": "Unlisted",
+    "private": "Private"
+  },
+  "defaults": {
+    "refund": "Contact the organizer to request a refund.",
+    "ticketName": "General admission"
+  },
+  "actions": {
+    "saveChanges": "Save changes",
+    "saveDetails": "Save details & continue",
+    "cancel": "Cancel",
+    "continueWithoutBanner": "Continue without banner",
+    "addTicketType": "Add ticket type",
+    "backToDetails": "Back to details",
+    "saveTickets": "Save tickets & continue",
+    "backToTickets": "Back to tickets",
+    "publish": "Publish event",
+    "keepDraft": "Keep as draft"
+  },
+  "bannerFailed": "Your event draft is saved, but the banner could not be attached. Retry saving or continue without a banner.",
+  "tickets": {
+    "heading": "Ticket type {number}",
+    "saved": "Saved",
+    "remove": "Remove ticket type {number}",
+    "savedNote": "This ticket type is saved. Add another type or continue to review.",
+    "name": "Ticket {number} name",
+    "kind": "Ticket {number} kind",
+    "kindFree": "Free",
+    "kindPaid": "Paid (KZT)",
+    "price": "Ticket {number} price (KZT)",
+    "quantity": "Ticket {number} quantity",
+    "salesStart": "Ticket {number} sales start",
+    "salesEnd": "Ticket {number} sales end",
+    "maximum": "Ticket {number} max per order",
+    "description": "Ticket {number} description"
+  },
+  "review": {
+    "heading": "Review before publication",
+    "ticketCount": "{quantity} tickets",
+    "free": "Free",
+    "noBanner": "Publishing without a banner image.",
+    "freeOnly": "Free-only events do not require paid-sales activation. Attendees can register without payment."
+  },
+  "errors": {
+    "futureStart": "Choose a future event start date. Reschedule duplicated past events before publishing.",
+    "endAfterStart": "Event end must be after the start.",
+    "registrationWindow": "Registration must open before it closes, and close no later than the event start.",
+    "capacity": "Capacity must be a positive whole number.",
+    "bannerProtocol": "Banner images must use an HTTP or HTTPS URL.",
+    "ticketName": "Each ticket type needs a name.",
+    "ticketLimits": "Use positive ticket quantities and a per-order limit from 1 to 50.",
+    "ticketSalesWindow": "Ticket sales must start before they end and stay within the registration window.",
+    "paidPrice": "Paid tickets need a positive KZT price.",
+    "noTickets": "Configure at least one ticket type.",
+    "totalCapacity": "Total ticket quantity must not exceed event capacity. Update capacity in Step 1 if needed."
+  }
+}

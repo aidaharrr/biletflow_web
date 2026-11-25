@@ -1,0 +1,13 @@
+{
+  "viewAnalytics": "View Analytics",
+  "manageAttendees": "Manage Attendees",
+  "duplicate": "Duplicate Event",
+  "cancel": "Cancel Event",
+  "modal": {
+    "title": "Cancel this event?",
+    "body": "Cancel {title} and stop further sales. Existing orders remain in the event history. Review refund requests separately.",
+    "reason": "Cancellation reason",
+    "confirm": "Confirm cancellation",
+    "reasonRequired": "Please provide a cancellation reason."
+  }
+}

@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
 import { Button, Modal, Textarea } from "@/components/ui";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { cancelEvent, duplicateEvent } from "@/lib/api";
@@ -14,6 +15,7 @@ export function EventActions({
   onChanged: () => void;
 }) {
   const router = useRouter();
+  const t = useTranslations("eventActions");
   const [cancel, setCancel] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
@@ -45,7 +47,7 @@ export function EventActions({
       new FormData(submit.currentTarget).get("reason"),
     ).trim();
     if (reason.length < 3) {
-      setError(new Error("Please provide a cancellation reason."));
+      setError(new Error(t("modal.reasonRequired")));
       return;
     }
     setBusy("cancel");
@@ -72,13 +74,13 @@ export function EventActions({
           href={`/organizer/events/${event.id}`}
           className="rounded-input px-sm py-3 font-medium underline"
         >
-          View Analytics
+          {t("viewAnalytics")}
         </Link>
         <Link
           href={`/organizer/events/${event.id}#attendees`}
           className="rounded-input px-sm py-3 font-medium underline"
         >
-          Manage Attendees
+          {t("manageAttendees")}
         </Link>
         <Button
           variant="text"
@@ -87,7 +89,7 @@ export function EventActions({
           disabled={!!busy}
           onClick={duplicate}
         >
-          Duplicate Event
+          {t("duplicate")}
         </Button>
         <Button
           variant="text"
@@ -99,13 +101,13 @@ export function EventActions({
             setCancel(true);
           }}
         >
-          Cancel Event
+          {t("cancel")}
         </Button>
       </div>
       {!!error && !cancel && <ErrorState error={error} />}{" "}
       {cancel && (
         <Modal
-          title="Cancel this event?"
+          title={t("modal.title")}
           busy={!!busy}
           onClose={() => {
             setCancel(false);
@@ -114,13 +116,12 @@ export function EventActions({
           }}
         >
           <p className="text-label text-text-secondary">
-            Cancel {event.title} and stop further sales. Existing orders remain
-            in the event history. Review refund requests separately.
+            {t("modal.body", { title: event.title })}
           </p>
           {!!error && <ErrorState error={error} />}
           <form onSubmit={confirmCancel} className="space-y-lg">
             <Textarea
-              label="Cancellation reason"
+              label={t("modal.reason")}
               name="reason"
               required
               minLength={3}
@@ -132,7 +133,7 @@ export function EventActions({
               loading={busy === "cancel"}
               className="w-full bg-error"
             >
-              Confirm cancellation
+              {t("modal.confirm")}
             </Button>
           </form>
         </Modal>

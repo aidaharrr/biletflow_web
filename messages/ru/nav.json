@@ -1,0 +1,16 @@
+{
+  "language": "Язык",
+  "Navbar": {
+    "mainNavigation": "Основная навигация",
+    "home": "BiletFlow — главная",
+    "events": "Мероприятия",
+    "myTickets": "Мои билеты",
+    "organizerPortal": "Кабинет организатора",
+    "becomeOrganizer": "Стать организатором",
+    "adminPanel": "Панель администратора",
+    "checkingSession": "Проверка сеанса…",
+    "myProfile": "Мой профиль",
+    "login": "Войти",
+    "register": "Регистрация"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "title": "Become an organizer",
+  "steps": {
+    "submit": "Submit your organizer details below.",
+    "review": "A platform administrator reviews the application.",
+    "approved": "Once approved, the Organizer portal appears in the menu and you can create events.",
+    "publish": "Free events can be published straight away. Paid events also need a sandbox paid-sales checklist and a separate admin review."
+  },
+  "checkingAccount": "Checking your account…",
+  "loadingApplication": "Loading your organizer application…",
+  "signedOut": {
+    "prompt": "Sign in or create an account to apply as an organizer.",
+    "signIn": "Sign in",
+    "createAccount": "Create account"
+  },
+  "organizer": {
+    "badge": "Organizer access active",
+    "body": "Your account can already create and manage events.",
+    "openPortal": "Open organizer portal"
+  },
+  "application": {
+    "title": "Your application",
+    "statusPending": "Pending review",
+    "statusApproved": "Approved",
+    "statusRejected": "Rejected",
+    "submitted": "{organization} · submitted {date}",
+    "pendingBody": "A platform administrator is reviewing your application. You will get a notification when it is decided.",
+    "approvedBody": "Approved. Refresh your access to open the organizer portal.",
+    "rejectedBody": "Your application was rejected. Check your notifications for the administrator's reason, update your details and apply again.",
+    "refreshAccess": "Refresh my access",
+    "checkStatus": "Check status"
+  },
+  "form": {
+    "title": "Organizer details",
+    "applyAgain": "Apply again",
+    "contactName": "Contact name",
+    "organizationName": "Organization name",
+    "contactPhone": "Contact phone",
+    "description": "What events do you organize?",
+    "submit": "Submit application"
+  }
+}

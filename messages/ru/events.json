@@ -1,0 +1,72 @@
+{
+  "EventsPage": {
+    "eyebrow": "Стройте планы. Создавайте воспоминания.",
+    "title": "Найдите свои новые впечатления.",
+    "subtitle": "Открывайте мероприятия, находите единомышленников и будьте в центре событий.",
+    "filterAria": "Фильтр мероприятий",
+    "searchLabel": "Поиск мероприятий",
+    "searchPlaceholder": "Поиск по названию или площадке",
+    "categoriesAria": "Категории мероприятий",
+    "categories": {
+      "All": "Все",
+      "Concerts": "Концерты",
+      "Tech": "Технологии",
+      "Student": "Студенческие",
+      "Sports": "Спорт"
+    },
+    "loading": "Ищем мероприятия…",
+    "resultsAria": "Результаты поиска",
+    "found": "{count, plural, one {Найдено # мероприятие} few {Найдено # мероприятия} many {Найдено # мероприятий} other {Найдено # мероприятия}}",
+    "emptyTitle": "Мероприятия не найдены",
+    "emptyBody": "Попробуйте изменить запрос или категорию.",
+    "clearFilters": "Сбросить фильтры"
+  },
+  "EventLoading": {
+    "label": "Загружаем мероприятие…"
+  },
+  "EventDetails": {
+    "unavailable": "Мероприятие недоступно.",
+    "allEvents": "← Все мероприятия",
+    "cancelled": "Мероприятие отменено",
+    "about": "О мероприятии",
+    "host": "Организатор",
+    "organizerFallback": "Организатор мероприятия",
+    "hostQuestion": "Есть вопросы о мероприятии? Напишите организатору.",
+    "contactOrganizer": "Написать в поддержку организатора",
+    "whereToMeet": "Место проведения",
+    "viewMap": "Посмотреть на карте ↗",
+    "refundPolicy": "Правила возврата",
+    "addToCalendar": "Добавить в календарь",
+    "chooseTickets": "Выберите билеты",
+    "free": "Бесплатно",
+    "paid": "Платно",
+    "quantityFor": "Количество: {name}",
+    "removeTicket": "Убрать билет «{name}»",
+    "addTicket": "Добавить билет «{name}»",
+    "availability": "Доступно: {remaining} · Не более {max} в одном заказе",
+    "ticketsUnavailable": "Билеты пока недоступны.",
+    "promoLabel": "Промокод",
+    "promoPlaceholder": "Введите код",
+    "applyPromo": "Применить промокод",
+    "campaignCode": "Код акции: {code}. Мы проверим его для выбранных билетов.",
+    "signInToValidate": "Войдите, чтобы проверить скидку.",
+    "promoApplied": "✓ Код <strong>{code}</strong> применён: вы экономите {amount}.",
+    "promoAppliedCampaign": "✓ Код <strong>{code}</strong> применён ({campaign}): вы экономите {amount}.",
+    "tickets": "Билеты",
+    "subtotal": "Стоимость билетов",
+    "discount": "Скидка",
+    "discountWithCode": "Скидка ({code})",
+    "processingFee": "Сервисный сбор",
+    "total": "Итого",
+    "estimatedSubtotal": "Предварительная стоимость",
+    "finalFeesNote": "Итоговые сборы и скидки будут показаны перед подтверждением заказа.",
+    "availabilityChanged": "Наличие билетов изменилось. Обновите свой выбор.",
+    "signInToCheckout": "Войдите, чтобы оформить заказ",
+    "proceed": "Перейти к оформлению"
+  },
+  "CampaignRedirect": {
+    "notAvailable": "Эта акция недоступна.",
+    "viewWithout": "Открыть мероприятие без акции",
+    "opening": "Открываем предложение…"
+  }
+}

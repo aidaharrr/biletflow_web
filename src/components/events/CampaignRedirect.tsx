@@ -7,7 +7,11 @@ import { Card } from "@/components/ui";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorState } from "@/components/ui/ErrorState";
 import type { CampaignResolution } from "@/types/api";
+import { useTranslations } from "next-intl";
+import { useErrorText } from "@/i18n/labels";
 export function CampaignRedirect({ token }: { token: string }) {
+  const t = useTranslations("events");
+  const errorText = useErrorText();
   const router = useRouter();
   const [error, setError] = useState<unknown>(null);
   const [unavailable, setUnavailable] = useState<CampaignResolution | null>(
@@ -43,16 +47,18 @@ export function CampaignRedirect({ token }: { token: string }) {
             {unavailable.event_title}
           </h1>
           <p role="status" className="text-text-secondary">
-            {unavailable.message ?? "This promotion is not available."}
+            {unavailable.message != null
+              ? errorText(unavailable.message)
+              : t("CampaignRedirect.notAvailable")}
           </p>
           <Link
             href={`/events/${encodeURIComponent(unavailable.event_id)}`}
             className="block rounded-button bg-primary px-5 py-3.5 text-center font-medium text-white"
           >
-            View event without the promotion
+            {t("CampaignRedirect.viewWithout")}
           </Link>
         </Card>
       </main>
     );
-  return <LoadingSpinner label="Opening your event offer…" />;
+  return <LoadingSpinner label={t("CampaignRedirect.opening")} />;
 }

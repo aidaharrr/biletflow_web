@@ -1,3 +1,4 @@
+import { mediumDateTime } from "./datetime";
 import type { Event, TicketType } from "@/types/api";
 import { formatKZT } from "./money";
 
@@ -38,12 +39,11 @@ export function filterEvents(
   });
 }
 
-export function eventDate(event: Pick<Event, "starts_at" | "time_zone">) {
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: event.time_zone,
-  }).format(new Date(event.starts_at));
+export function eventDate(
+  event: Pick<Event, "starts_at" | "time_zone">,
+  locale = "en-GB",
+) {
+  return mediumDateTime(new Date(event.starts_at), locale, event.time_zone);
 }
 
 export function priceRange(types: TicketType[]) {

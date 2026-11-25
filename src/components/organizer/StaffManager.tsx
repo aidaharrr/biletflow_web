@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
 import { Badge, Button, Card, Input, Select } from "@/components/ui";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -29,6 +30,7 @@ export function StaffManager({ event }: { event: Event }) {
     [event.id],
   );
   const staff = useApiData(load);
+  const t = useTranslations("staff");
   const [access, setAccess] = useState<Access>("check_in");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -54,18 +56,18 @@ export function StaffManager({ event }: { event: Event }) {
     submit.preventDefault();
     const address = email.trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(address)) {
-      setError(new Error("Enter the email address of a registered account."));
+      setError(new Error(t("invalidEmail")));
       return;
     }
     await run("invite", async () => {
       if (access === "check_in") {
         const member = await assignCheckInStaff(event.id, address);
         setEmail("");
-        return `${member.name} can now check in attendees for this event in the BiletFlow mobile app.`;
+        return t("notices.checkInAdded", { name: member.name });
       }
       const member = await grantSupportStaff(event.id, address);
       setEmail("");
-      return `${member.name} can now handle and be assigned this event's support cases.`;
+      return t("notices.supportAdded", { name: member.name });
     });
   }
 
@@ -73,13 +75,9 @@ export function StaffManager({ event }: { event: Event }) {
     <section className="space-y-lg" aria-labelledby="staff-heading">
       <div className="space-y-sm">
         <h2 id="staff-heading" className="text-title">
-          Event staff
+          {t("heading")}
         </h2>
-        <p className="text-label text-text-secondary">
-          Give a registered BiletFlow user access to this event only. Check-in
-          staff sign in to the mobile app to scan tickets. Support agents can
-          answer and be assigned this event&apos;s support cases.
-        </p>
+        <p className="text-label text-text-secondary">{t("intro")}</p>
       </div>
       {open && (
         <Card>
@@ -88,7 +86,7 @@ export function StaffManager({ event }: { event: Event }) {
             className="grid items-end gap-md sm:grid-cols-[1fr_220px_auto]"
           >
             <Input
-              label="Staff member email"
+              label={t("email")}
               type="email"
               autoComplete="off"
               value={email}
@@ -97,21 +95,20 @@ export function StaffManager({ event }: { event: Event }) {
               disabled={!!busy}
             />
             <Select
-              label="Access"
+              label={t("access")}
               value={access}
               onChange={(change) => setAccess(change.target.value as Access)}
               disabled={!!busy}
             >
-              <option value="check_in">Check-in (mobile scanner)</option>
-              <option value="support">Support agent</option>
+              <option value="check_in">{t("accessCheckIn")}</option>
+              <option value="support">{t("accessSupport")}</option>
             </Select>
             <Button type="submit" loading={busy === "invite"} disabled={!!busy}>
-              Assign
+              {t("assign")}
             </Button>
           </form>
           <p className="mt-md text-label text-text-secondary">
-            The person must already have an account. Ask them to register first
-            if the email is not found.
+            {t("accountNote")}
           </p>
         </Card>
       )}
@@ -125,15 +122,16 @@ export function StaffManager({ event }: { event: Event }) {
       )}
       {!!error && <ErrorState error={error} />}
       {staff.loading ? (
-        <LoadingSpinner label="Loading event staff…" />
+        <LoadingSpinner label={t("loading")} />
       ) : staff.error || !staff.data ? (
         <ErrorState error={staff.error} retry={staff.retry} />
       ) : (
         <div className="grid gap-lg md:grid-cols-2">
           <StaffList
-            title="Check-in staff"
-            badge="Scanner"
-            empty="No check-in staff yet. Only you can scan tickets for this event."
+            title={t("checkIn.title")}
+            badge={t("checkIn.badge")}
+            empty={t("checkIn.empty")}
+            removeLabel={t("remove")}
             people={staff.data.checkIn.map((member) => ({
               id: member.user_id,
               name: member.name,
@@ -143,15 +141,16 @@ export function StaffManager({ event }: { event: Event }) {
             onRemove={(person) =>
               run(`check_in:${person.id}`, async () => {
                 await removeCheckInStaff(event.id, person.id);
-                return `${person.name} no longer has check-in access.`;
+                return t("notices.checkInRemoved", { name: person.name });
               })
             }
             removeKey="check_in"
           />
           <StaffList
-            title="Support agents"
-            badge="Support"
-            empty="No support agents yet. Cases are assigned to you."
+            title={t("support.title")}
+            badge={t("support.badge")}
+            empty={t("support.empty")}
+            removeLabel={t("remove")}
             people={staff.data.support.map((member) => ({
               id: member.id,
               name: member.name,
@@ -160,7 +159,7 @@ export function StaffManager({ event }: { event: Event }) {
             onRemove={(person) =>
               run(`support:${person.id}`, async () => {
                 await revokeSupportStaff(event.id, person.id);
-                return `${person.name} no longer handles support. Their open cases were unassigned.`;
+                return t("notices.supportRemoved", { name: person.name });
               })
             }
             removeKey="support"
@@ -175,6 +174,7 @@ function StaffList({
   title,
   badge,
   empty,
+  removeLabel,
   people,
   busy,
   onRemove,
@@ -183,6 +183,7 @@ function StaffList({
   title: string;
   badge: string;
   empty: string;
+  removeLabel: string;
   people: { id: string; name: string; detail?: string }[];
   busy: string | null;
   onRemove: (person: { id: string; name: string }) => void;
@@ -217,7 +218,7 @@ function StaffList({
                 disabled={!!busy}
                 onClick={() => onRemove(person)}
               >
-                Remove
+                {removeLabel}
               </Button>
             </li>
           ))}

@@ -1,0 +1,123 @@
+{
+  "loading": "Loading event analytics and history…",
+  "header": {
+    "backToDashboard": "← Dashboard",
+    "refresh": "Refresh event data",
+    "campaigns": "Campaigns for this event",
+    "supportCases": "Event support cases",
+    "publicPage": "Public event page ↗",
+    "editDraft": "Complete or edit this draft",
+    "editDetails": "Edit event details"
+  },
+  "stats": {
+    "caption": "All-time event totals · Sandbox financial records · Server-calculated metrics",
+    "grossLabel": "Gross sales",
+    "grossHelper": "Confirmed order subtotals",
+    "soldLabel": "Tickets sold",
+    "soldHelper": "{percent} of ticket capacity",
+    "checkInLabel": "Check-in percentage",
+    "checkInHelper": "{checked} checked in · {absent} absent",
+    "netLabel": "Net demonstration revenue",
+    "netHelper": "Server net after recorded refunds",
+    "unavailable": "Unavailable"
+  },
+  "sales": {
+    "title": "Sales progress",
+    "progressLabel": "Ticket sales progress",
+    "soldRemaining": "{sold} sold · {remaining} remaining",
+    "discounts": "Discounts",
+    "refunds": "Refunds",
+    "unavailable": "Sales metrics are unavailable."
+  },
+  "attendance": {
+    "title": "Attendance",
+    "progressLabel": "Check-in attendance",
+    "summary": "{checked} checked in out of {sold} valid issued tickets.",
+    "unavailable": "Attendance metrics are unavailable."
+  },
+  "series": {
+    "title": "Sales over time",
+    "from": "Sales date from (UTC)",
+    "to": "Sales date to (UTC)",
+    "invalidRange": "The end date must not precede the start date.",
+    "chartLabel": "Daily confirmed order revenue",
+    "point": "{date} · {orders, plural, one {# order} other {# orders}}",
+    "empty": "No confirmed sales in this date range.",
+    "note": "The date range filters this series only. Confirmed order totals include processing fees. Event summary cards remain all-time."
+  },
+  "types": {
+    "title": "Ticket type revenue breakdown",
+    "compare": "Compare ticket type",
+    "all": "All ticket types",
+    "revenueUnavailable": "Ticket-type revenue reporting is not available yet. Inventory counts are shown below; historical revenue is not estimated from current ticket prices.",
+    "columns": {
+      "ticketType": "Ticket type",
+      "available": "Available",
+      "reserved": "Reserved",
+      "sold": "Sold",
+      "refunded": "Refunded",
+      "grossRevenue": "Gross revenue"
+    },
+    "hidden": "Hidden",
+    "empty": "No ticket types configured."
+  },
+  "attendees": {
+    "title": "Attendee list",
+    "description": "Attendee details from event orders. Each row represents one order, which may contain several tickets.",
+    "search": "Search attendees",
+    "searchPlaceholder": "Name, email, or order ID",
+    "statusFilter": "Attendee order status",
+    "allOrders": "All orders",
+    "columns": {
+      "attendee": "Attendee / Email",
+      "order": "Order",
+      "status": "Status",
+      "total": "Total",
+      "refund": "Refund"
+    },
+    "tickets": "{count, plural, one {# ticket} other {# tickets}}",
+    "refundButton": "Refund order {id}",
+    "empty": "No attendees match this search."
+  },
+  "orderStatus": {
+    "confirmed": "confirmed",
+    "pending": "pending",
+    "refunded": "refunded",
+    "partially_refunded": "partially refunded",
+    "cancelled": "cancelled",
+    "expired": "expired",
+    "payment_failed": "payment failed"
+  },
+  "history": {
+    "title": "Activity timeline",
+    "actionFilter": "Timeline action",
+    "allActions": "All actions",
+    "actor": "Actor {id}",
+    "system": "System",
+    "empty": "No recorded activity for this filter.",
+    "note": "Oldest to newest · Server-recorded activity"
+  },
+  "publication": {
+    "title": "Publication & paid sales",
+    "publish": "Publish event",
+    "unpublish": "Unpublish event",
+    "activationRequired": "Complete paid-sales activation before publishing.",
+    "historyNote": "Changes remain part of this event’s history.",
+    "published": "Event published.",
+    "returnedToDraft": "Event returned to draft."
+  },
+  "refund": {
+    "title": "Refund this order?",
+    "description": "Full demonstration refund for {name}: {amount}. Successful refunds invalidate every ticket on this order. No real money is transferred.",
+    "reason": "Refund reason",
+    "confirm": "Confirm full refund",
+    "reasonRequired": "Enter a refund reason.",
+    "completed": "Demonstration refund completed. The server invalidated this order’s tickets.",
+    "submitted": "Refund request submitted: {status}."
+  },
+  "refundStatus": {
+    "pending": "pending",
+    "succeeded": "succeeded",
+    "failed": "failed"
+  }
+}

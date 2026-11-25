@@ -34,6 +34,8 @@ import { eventDate } from "@/lib/events";
 import { formatKZT } from "@/lib/money";
 import { useApiData } from "@/hooks/useApiData";
 import type { Order } from "@/types/api";
+import { useTranslations } from "next-intl";
+import { useIntlLocale, useLabel } from "@/i18n/labels";
 async function capture<T>(
   promise: Promise<T>,
 ): Promise<{ data: T | null; error: unknown }> {
@@ -61,6 +63,10 @@ function Progress({ value, label }: { value: number; label: string }) {
   );
 }
 export function EventAnalytics({ id }: { id: string }) {
+  const t = useTranslations("analytics");
+  const tStatus = useTranslations("organizer.eventStatus");
+  const label = useLabel();
+  const locale = useIntlLocale();
   const load = useCallback(
     async (signal: AbortSignal) => {
       const event = await getManagedEvent(id, { signal });
@@ -102,7 +108,7 @@ export function EventAnalytics({ id }: { id: string }) {
       new FormData(submit.currentTarget).get("reason"),
     ).trim();
     if (reason.length < 3) {
-      setError(new Error("Enter a refund reason."));
+      setError(new Error(t("refund.reasonRequired")));
       return;
     }
     setBusy(true);
@@ -118,8 +124,10 @@ export function EventAnalytics({ id }: { id: string }) {
       );
       setNotice(
         result.status === "succeeded"
-          ? "Demonstration refund completed. The server invalidated this order’s tickets."
-          : `Refund request submitted: ${result.status}.`,
+          ? t("refund.completed")
+          : t("refund.submitted", {
+              status: t(`refundStatus.${result.status}`),
+            }),
       );
       setRefund(null);
       refundKey.current = null;
@@ -137,7 +145,9 @@ export function EventAnalytics({ id }: { id: string }) {
       if (action === "publish") await publishEvent(id);
       else await unpublishEvent(id);
       setNotice(
-        action === "publish" ? "Event published." : "Event returned to draft.",
+        action === "publish"
+          ? t("publication.published")
+          : t("publication.returnedToDraft"),
       );
       resource.retry();
     } catch (error) {
@@ -146,8 +156,7 @@ export function EventAnalytics({ id }: { id: string }) {
       setBusy(false);
     }
   }
-  if (resource.loading)
-    return <LoadingSpinner label="Loading event analytics and history…" />;
+  if (resource.loading) return <LoadingSpinner label={t("loading")} />;
   if (resource.error || !resource.data)
     return <ErrorState error={resource.error} retry={resource.retry} />;
   const { event, summary, series, types, history, orders } = resource.data;
@@ -179,7 +188,7 @@ export function EventAnalytics({ id }: { id: string }) {
           href="/organizer/dashboard"
           className="text-label text-text-secondary underline"
         >
-          ← Dashboard
+          {t("header.backToDashboard")}
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-md">
           <div className="min-w-0 space-y-sm">
@@ -192,30 +201,30 @@ export function EventAnalytics({ id }: { id: string }) {
                     : "neutral"
               }
             >
-              {event.status}
+              {tStatus(event.status)}
             </Badge>
             <h1 className="break-words font-brand text-3xl font-semibold">
               {event.title}
             </h1>
             <p className="text-label text-text-secondary">
-              {eventDate(event)} · {event.venue.name}
+              {eventDate(event, locale)} · {event.venue.name}
             </p>
           </div>
           <Button variant="outlined" onClick={resource.retry}>
-            Refresh event data
+            {t("header.refresh")}
           </Button>
         </div>
         <EventActions event={event} onChanged={resource.retry} />
         <div className="flex flex-wrap gap-md text-label">
           <Link href={`/organizer/campaigns?event=${id}`} className="underline">
-            Campaigns for this event
+            {t("header.campaigns")}
           </Link>
           <Link href={`/organizer/support?event=${id}`} className="underline">
-            Event support cases
+            {t("header.supportCases")}
           </Link>
           {event.status !== "draft" && event.visibility !== "private" && (
             <Link href={`/events/${id}`} className="underline">
-              Public event page ↗
+              {t("header.publicPage")}
             </Link>
           )}
           {["draft", "published"].includes(event.status) && (
@@ -224,8 +233,8 @@ export function EventAnalytics({ id }: { id: string }) {
               className="underline"
             >
               {event.status === "draft"
-                ? "Complete or edit this draft"
-                : "Edit event details"}
+                ? t("header.editDraft")
+                : t("header.editDetails")}
             </Link>
           )}
         </div>
@@ -239,41 +248,45 @@ export function EventAnalytics({ id }: { id: string }) {
         </p>
       )}
       {!!error && !refund && <ErrorState error={error} />}
-      <p className="text-label text-text-secondary">
-        All-time event totals · Sandbox financial records · Server-calculated
-        metrics
-      </p>
+      <p className="text-label text-text-secondary">{t("stats.caption")}</p>
       <div className="grid gap-md sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Gross sales"
+          label={t("stats.grossLabel")}
           value={metrics ? formatKZT(metrics.gross_sales_minor) : "—"}
-          helper="Confirmed order subtotals"
+          helper={t("stats.grossHelper")}
           accent
         />
         <StatCard
-          label="Tickets sold"
+          label={t("stats.soldLabel")}
           value={
             metrics ? `${metrics.tickets_sold} / ${metrics.capacity}` : "—"
           }
           helper={
             metrics
-              ? `${percentText(metrics.percentage_sold)} of ticket capacity`
-              : "Unavailable"
+              ? t("stats.soldHelper", {
+                  percent: percentText(metrics.percentage_sold, locale),
+                })
+              : t("stats.unavailable")
           }
         />
         <StatCard
-          label="Check-in percentage"
-          value={metrics ? percentText(metrics.check_in_percentage) : "—"}
+          label={t("stats.checkInLabel")}
+          value={
+            metrics ? percentText(metrics.check_in_percentage, locale) : "—"
+          }
           helper={
             metrics
-              ? `${metrics.checked_in} checked in · ${metrics.absent} absent`
-              : "Unavailable"
+              ? t("stats.checkInHelper", {
+                  checked: metrics.checked_in,
+                  absent: metrics.absent,
+                })
+              : t("stats.unavailable")
           }
         />
         <StatCard
-          label="Net demonstration revenue"
+          label={t("stats.netLabel")}
           value={metrics ? formatKZT(metrics.net_revenue_minor) : "—"}
-          helper="Server net after recorded refunds"
+          helper={t("stats.netHelper")}
         />
       </div>
       {!!summary.error && (
@@ -281,66 +294,70 @@ export function EventAnalytics({ id }: { id: string }) {
       )}
       <div className="grid gap-lg lg:grid-cols-2">
         <Card className="space-y-md">
-          <h2 className="text-title">Sales progress</h2>
+          <h2 className="text-title">{t("sales.title")}</h2>
           {metrics ? (
             <>
               <Progress
                 value={metrics.percentage_sold}
-                label="Ticket sales progress"
+                label={t("sales.progressLabel")}
               />
               <p className="text-label text-text-secondary">
-                {metrics.tickets_sold} sold · {metrics.tickets_remaining}{" "}
-                remaining
+                {t("sales.soldRemaining", {
+                  sold: metrics.tickets_sold,
+                  remaining: metrics.tickets_remaining,
+                })}
               </p>
               <dl className="space-y-sm text-label">
                 <div className="flex justify-between gap-md">
-                  <dt>Discounts</dt>
+                  <dt>{t("sales.discounts")}</dt>
                   <dd>{formatKZT(metrics.discounts_minor)}</dd>
                 </div>
                 <div className="flex justify-between gap-md">
-                  <dt>Refunds</dt>
+                  <dt>{t("sales.refunds")}</dt>
                   <dd>{formatKZT(metrics.refunds_minor)}</dd>
                 </div>
               </dl>
             </>
           ) : (
             <p className="text-label text-text-secondary">
-              Sales metrics are unavailable.
+              {t("sales.unavailable")}
             </p>
           )}
         </Card>
         <Card className="space-y-md">
-          <h2 className="text-title">Attendance</h2>
+          <h2 className="text-title">{t("attendance.title")}</h2>
           {metrics ? (
             <>
               <Progress
                 value={metrics.check_in_percentage}
-                label="Check-in attendance"
+                label={t("attendance.progressLabel")}
               />
               <p className="text-label text-text-secondary">
-                {metrics.checked_in} checked in out of {metrics.tickets_sold}{" "}
-                valid issued tickets.
+                {t("attendance.summary", {
+                  checked: metrics.checked_in,
+                  sold: metrics.tickets_sold,
+                })}
               </p>
             </>
           ) : (
             <p className="text-label text-text-secondary">
-              Attendance metrics are unavailable.
+              {t("attendance.unavailable")}
             </p>
           )}
         </Card>
       </div>
       <Card className="space-y-lg">
         <div className="flex flex-wrap items-center justify-between gap-md">
-          <h2 className="text-title">Sales over time</h2>
+          <h2 className="text-title">{t("series.title")}</h2>
           <div className="flex flex-wrap gap-md">
             <Input
-              label="Sales date from (UTC)"
+              label={t("series.from")}
               type="date"
               value={from}
               onChange={(event) => setFrom(event.target.value)}
             />
             <Input
-              label="Sales date to (UTC)"
+              label={t("series.to")}
               type="date"
               value={to}
               onChange={(event) => setTo(event.target.value)}
@@ -349,20 +366,23 @@ export function EventAnalytics({ id }: { id: string }) {
         </div>
         {from && to && from > to ? (
           <p role="alert" className="text-label text-error">
-            The end date must not precede the start date.
+            {t("series.invalidRange")}
           </p>
         ) : series.error ? (
           <ErrorState error={series.error} retry={resource.retry} />
         ) : points.length ? (
           <div
-            aria-label="Daily confirmed order revenue"
+            aria-label={t("series.chartLabel")}
             className="max-h-80 space-y-md overflow-y-auto"
           >
             {points.map((point) => (
               <div key={point.date} className="space-y-sm">
                 <div className="flex flex-wrap justify-between gap-sm text-label">
                   <span>
-                    {point.date} · {point.orders} orders
+                    {t("series.point", {
+                      date: point.date,
+                      orders: point.orders,
+                    })}
                   </span>
                   <span className="font-medium">
                     {formatKZT(point.revenue_minor)}
@@ -380,24 +400,19 @@ export function EventAnalytics({ id }: { id: string }) {
             ))}
           </div>
         ) : (
-          <p className="text-label text-text-secondary">
-            No confirmed sales in this date range.
-          </p>
+          <p className="text-label text-text-secondary">{t("series.empty")}</p>
         )}
-        <p className="text-label text-text-secondary">
-          The date range filters this series only. Confirmed order totals
-          include processing fees. Event summary cards remain all-time.
-        </p>
+        <p className="text-label text-text-secondary">{t("series.note")}</p>
       </Card>
       <section className="space-y-lg">
         <div className="grid items-end gap-md sm:grid-cols-[1fr_260px]">
-          <h2 className="text-title">Ticket type revenue breakdown</h2>
+          <h2 className="text-title">{t("types.title")}</h2>
           <Select
-            label="Compare ticket type"
+            label={t("types.compare")}
             value={selectedType}
             onChange={(event) => setSelectedType(event.target.value)}
           >
-            <option value="">All ticket types</option>
+            <option value="">{t("types.all")}</option>
             {event.available_ticket_types.map((type) => (
               <option key={type.id} value={type.id}>
                 {type.name}
@@ -410,9 +425,7 @@ export function EventAnalytics({ id }: { id: string }) {
             role="status"
             className="rounded-input border border-divider bg-surface p-md text-label text-text-secondary"
           >
-            Ticket-type revenue reporting is not available yet. Inventory counts
-            are shown below; historical revenue is not estimated from current
-            ticket prices.
+            {t("types.revenueUnavailable")}
           </p>
         )}
         {!!types.error && !unavailableTypeRevenue && (
@@ -424,19 +437,19 @@ export function EventAnalytics({ id }: { id: string }) {
               <thead className="border-b border-divider bg-background text-text-secondary">
                 <tr>
                   {[
-                    "Ticket type",
-                    "Available",
-                    "Reserved",
-                    "Sold",
-                    "Refunded",
-                    "Gross revenue",
-                  ].map((label) => (
+                    "ticketType",
+                    "available",
+                    "reserved",
+                    "sold",
+                    "refunded",
+                    "grossRevenue",
+                  ].map((column) => (
                     <th
-                      key={label}
+                      key={column}
                       scope="col"
                       className="px-lg py-md font-medium"
                     >
-                      {label}
+                      {t(`types.columns.${column}`)}
                     </th>
                   ))}
                 </tr>
@@ -455,9 +468,9 @@ export function EventAnalytics({ id }: { id: string }) {
                         <p className="font-medium">{type.name}</p>
                         <p className="mt-xs text-text-secondary">
                           {type.kind === "free"
-                            ? "Free"
+                            ? label("Free")
                             : formatKZT(type.price_minor)}
-                          {type.is_hidden ? " · Hidden" : ""}
+                          {type.is_hidden ? ` · ${t("types.hidden")}` : ""}
                         </p>
                       </td>
                       <td className="px-lg py-md">
@@ -479,31 +492,30 @@ export function EventAnalytics({ id }: { id: string }) {
             </table>
             {!ticketTypes.length && (
               <p className="p-lg text-label text-text-secondary">
-                No ticket types configured.
+                {t("types.empty")}
               </p>
             )}
           </div>
         </Card>
       </section>
       <section id="attendees" className="scroll-mt-lg space-y-lg">
-        <h2 className="text-title">Attendee list</h2>
+        <h2 className="text-title">{t("attendees.title")}</h2>
         <p className="text-label text-text-secondary">
-          Attendee details from event orders. Each row represents one order,
-          which may contain several tickets.
+          {t("attendees.description")}
         </p>
         <div className="grid gap-md sm:grid-cols-2">
           <Input
-            label="Search attendees"
-            placeholder="Name, email, or order ID"
+            label={t("attendees.search")}
+            placeholder={t("attendees.searchPlaceholder")}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
           <Select
-            label="Attendee order status"
+            label={t("attendees.statusFilter")}
             value={orderStatus}
             onChange={(event) => setOrderStatus(event.target.value)}
           >
-            <option value="">All orders</option>
+            <option value="">{t("attendees.allOrders")}</option>
             {[
               "confirmed",
               "pending",
@@ -514,7 +526,7 @@ export function EventAnalytics({ id }: { id: string }) {
               "payment_failed",
             ].map((status) => (
               <option key={status} value={status}>
-                {status.replace(/_/g, " ")}
+                {t(`orderStatus.${status}`)}
               </option>
             ))}
           </Select>
@@ -527,21 +539,17 @@ export function EventAnalytics({ id }: { id: string }) {
               <table className="w-full min-w-[760px] text-left text-label">
                 <thead className="border-b border-divider bg-background text-text-secondary">
                   <tr>
-                    {[
-                      "Attendee / Email",
-                      "Order",
-                      "Status",
-                      "Total",
-                      "Refund",
-                    ].map((label) => (
-                      <th
-                        key={label}
-                        scope="col"
-                        className="px-lg py-md font-medium"
-                      >
-                        {label}
-                      </th>
-                    ))}
+                    {["attendee", "order", "status", "total", "refund"].map(
+                      (column) => (
+                        <th
+                          key={column}
+                          scope="col"
+                          className="px-lg py-md font-medium"
+                        >
+                          {t(`attendees.columns.${column}`)}
+                        </th>
+                      ),
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -565,11 +573,12 @@ export function EventAnalytics({ id }: { id: string }) {
                         </Link>
                         {order.items && (
                           <p className="mt-xs text-text-secondary">
-                            {order.items.reduce(
-                              (sum, item) => sum + item.quantity,
-                              0,
-                            )}{" "}
-                            tickets
+                            {t("attendees.tickets", {
+                              count: order.items.reduce(
+                                (sum, item) => sum + item.quantity,
+                                0,
+                              ),
+                            })}
                           </p>
                         )}
                       </td>
@@ -579,7 +588,7 @@ export function EventAnalytics({ id }: { id: string }) {
                             order.status === "confirmed" ? "success" : "neutral"
                           }
                         >
-                          {order.status.replace(/_/g, " ")}
+                          {t(`orderStatus.${order.status}`)}
                         </Badge>
                       </td>
                       <td className="whitespace-nowrap px-lg py-md">
@@ -595,7 +604,9 @@ export function EventAnalytics({ id }: { id: string }) {
                             setRefund(order);
                           }}
                         >
-                          Refund order {order.id.slice(0, 8)}
+                          {t("attendees.refundButton", {
+                            id: order.id.slice(0, 8),
+                          })}
                         </Button>
                       </td>
                     </tr>
@@ -604,7 +615,7 @@ export function EventAnalytics({ id }: { id: string }) {
               </table>
               {!attendees.length && (
                 <p className="p-lg text-label text-text-secondary">
-                  No attendees match this search.
+                  {t("attendees.empty")}
                 </p>
               )}
             </div>
@@ -615,13 +626,13 @@ export function EventAnalytics({ id }: { id: string }) {
       <StaffManager event={event} />
       <section className="space-y-lg">
         <div className="grid items-end gap-md sm:grid-cols-[1fr_260px]">
-          <h2 className="text-title">Activity timeline</h2>
+          <h2 className="text-title">{t("history.title")}</h2>
           <Select
-            label="Timeline action"
+            label={t("history.actionFilter")}
             value={actionFilter}
             onChange={(event) => setActionFilter(event.target.value)}
           >
-            <option value="">All actions</option>
+            <option value="">{t("history.allActions")}</option>
             {[...new Set((history.data ?? []).map((entry) => entry.action))]
               .sort()
               .map((action) => (
@@ -650,25 +661,25 @@ export function EventAnalytics({ id }: { id: string }) {
                     {entry.action.replace(/[._]/g, " ")} ·{" "}
                     {entry.actor_name ??
                       (entry.actor_id
-                        ? `Actor ${entry.actor_id.slice(0, 8)}`
-                        : "System")}
+                        ? t("history.actor", { id: entry.actor_id.slice(0, 8) })
+                        : t("history.system"))}
                   </p>
                   <time
                     dateTime={entry.timestamp}
                     className="mt-sm block text-label text-text-secondary"
                   >
-                    {dateLabel(entry.timestamp)} · UTC+05:00
+                    {dateLabel(entry.timestamp, locale)} · UTC+05:00
                   </time>
                 </li>
               ))}
             </ol>
             {!historyRows.length && (
               <p className="text-label text-text-secondary">
-                No recorded activity for this filter.
+                {t("history.empty")}
               </p>
             )}
             <p className="mt-lg text-label text-text-secondary">
-              Oldest to newest · Server-recorded activity
+              {t("history.note")}
             </p>
           </Card>
         )}
@@ -676,7 +687,7 @@ export function EventAnalytics({ id }: { id: string }) {
       {["draft", "published"].includes(event.status) &&
         Date.parse(event.ends_at) > resource.data.asOf && (
           <Card className="space-y-lg">
-            <h2 className="text-title">Publication & paid sales</h2>
+            <h2 className="text-title">{t("publication.title")}</h2>
             {hasPaid && (
               <PaidActivation eventId={id} onActivated={resource.retry} />
             )}
@@ -690,7 +701,7 @@ export function EventAnalytics({ id }: { id: string }) {
                   }
                   onClick={() => lifecycle("publish")}
                 >
-                  Publish event
+                  {t("publication.publish")}
                 </Button>
               ) : (
                 <Button
@@ -698,20 +709,20 @@ export function EventAnalytics({ id }: { id: string }) {
                   loading={busy}
                   onClick={() => lifecycle("unpublish")}
                 >
-                  Unpublish event
+                  {t("publication.unpublish")}
                 </Button>
               )}
               <p className="self-center text-label text-text-secondary">
                 {hasPaid && event.paid_sales_status !== "active"
-                  ? "Complete paid-sales activation before publishing."
-                  : "Changes remain part of this event’s history."}
+                  ? t("publication.activationRequired")
+                  : t("publication.historyNote")}
               </p>
             </div>
           </Card>
         )}
       {refund && (
         <Modal
-          title="Refund this order?"
+          title={t("refund.title")}
           busy={busy}
           onClose={() => {
             setRefund(null);
@@ -719,14 +730,15 @@ export function EventAnalytics({ id }: { id: string }) {
           }}
         >
           <p className="text-label text-text-secondary">
-            Full demonstration refund for {refund.attendee_name}:{" "}
-            {formatKZT(refund.total_minor)}. Successful refunds invalidate every
-            ticket on this order. No real money is transferred.
+            {t("refund.description", {
+              name: refund.attendee_name,
+              amount: formatKZT(refund.total_minor),
+            })}
           </p>
           {!!error && <ErrorState error={error} />}
           <form onSubmit={confirmRefund} className="space-y-lg">
             <Textarea
-              label="Refund reason"
+              label={t("refund.reason")}
               name="reason"
               required
               minLength={3}
@@ -734,7 +746,7 @@ export function EventAnalytics({ id }: { id: string }) {
               disabled={busy}
             />
             <Button type="submit" className="w-full bg-error" loading={busy}>
-              Confirm full refund
+              {t("refund.confirm")}
             </Button>
           </form>
         </Modal>

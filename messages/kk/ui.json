@@ -1,0 +1,15 @@
+{
+  "Button": {
+    "loading": "Жүктелуде"
+  },
+  "LoadingSpinner": {
+    "loading": "Жүктелуде…"
+  },
+  "Modal": {
+    "close": "Терезені жабу"
+  },
+  "ErrorState": {
+    "tryAgain": "Қайталау",
+    "signIn": "Кіру"
+  }
+}

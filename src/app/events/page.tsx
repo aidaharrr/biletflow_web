@@ -8,8 +8,14 @@ import { listEvents } from "@/lib/api";
 import { categoryFilters, filterEvents } from "@/lib/events";
 import { useApiData } from "@/hooks/useApiData";
 import { cn } from "@/lib/cn";
+import { useTranslations } from "next-intl";
+import { useLabel } from "@/i18n/labels";
+
+const FIXED_CATEGORIES = new Set(categoryFilters.map((filter) => filter.label));
 
 export default function EventsPage() {
+  const t = useTranslations("events");
+  const label = useLabel();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const load = useCallback((signal: AbortSignal) => listEvents({ signal }), []);
@@ -33,25 +39,26 @@ export default function EventsPage() {
     <main className="mx-auto max-w-7xl space-y-xl px-md py-xl sm:px-lg lg:px-xl">
       <header className="max-w-2xl space-y-md">
         <p className="text-label font-medium uppercase tracking-widest text-primary">
-          Make plans. Make memories.
+          {t("EventsPage.eyebrow")}
         </p>
         <h1 className="font-brand text-3xl font-semibold sm:text-4xl">
-          Find your next experience.
+          {t("EventsPage.title")}
         </h1>
-        <p className="text-text-secondary">
-          Discover events, meet your community, and be there for what matters.
-        </p>
+        <p className="text-text-secondary">{t("EventsPage.subtitle")}</p>
       </header>
-      <section aria-label="Filter events" className="space-y-lg">
+      <section aria-label={t("EventsPage.filterAria")} className="space-y-lg">
         <Input
-          label="Search events"
+          label={t("EventsPage.searchLabel")}
           type="search"
-          placeholder="Search by event or venue"
+          placeholder={t("EventsPage.searchPlaceholder")}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           containerClassName="max-w-[36rem]"
         />
-        <div className="flex flex-wrap gap-sm" aria-label="Event categories">
+        <div
+          className="flex flex-wrap gap-sm"
+          aria-label={t("EventsPage.categoriesAria")}
+        >
           {categories.map((value) => (
             <button
               key={value}
@@ -63,19 +70,24 @@ export default function EventsPage() {
                 category === value && "border-primary bg-primary text-white",
               )}
             >
-              {value}
+              {FIXED_CATEGORIES.has(value)
+                ? t(`EventsPage.categories.${value}`)
+                : label(value)}
             </button>
           ))}
         </div>
       </section>
       {loading ? (
-        <LoadingSpinner label="Finding events…" />
+        <LoadingSpinner label={t("EventsPage.loading")} />
       ) : error ? (
         <ErrorState error={error} retry={retry} />
       ) : (
-        <section aria-label="Event results" className="space-y-lg">
+        <section
+          aria-label={t("EventsPage.resultsAria")}
+          className="space-y-lg"
+        >
           <p role="status" className="text-label text-text-secondary">
-            {filtered.length} {filtered.length === 1 ? "event" : "events"} found
+            {t("EventsPage.found", { count: filtered.length })}
           </p>
           {filtered.length ? (
             <div className="grid gap-lg sm:grid-cols-2 lg:grid-cols-3">
@@ -85,10 +97,8 @@ export default function EventsPage() {
             </div>
           ) : (
             <div className="space-y-md rounded-card border border-divider bg-surface p-xl text-center">
-              <h2 className="text-title">No events found</h2>
-              <p className="text-text-secondary">
-                Try another search or category.
-              </p>
+              <h2 className="text-title">{t("EventsPage.emptyTitle")}</h2>
+              <p className="text-text-secondary">{t("EventsPage.emptyBody")}</p>
               <Button
                 variant="outlined"
                 onClick={() => {
@@ -96,7 +106,7 @@ export default function EventsPage() {
                   setCategory("All");
                 }}
               >
-                Clear filters
+                {t("EventsPage.clearFilters")}
               </Button>
             </div>
           )}

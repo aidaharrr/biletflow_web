@@ -1,0 +1,29 @@
+{
+  "heading": "Event staff",
+  "intro": "Give a registered BiletFlow user access to this event only. Check-in staff sign in to the mobile app to scan tickets. Support agents can answer and be assigned this event's support cases.",
+  "email": "Staff member email",
+  "access": "Access",
+  "accessCheckIn": "Check-in (mobile scanner)",
+  "accessSupport": "Support agent",
+  "assign": "Assign",
+  "accountNote": "The person must already have an account. Ask them to register first if the email is not found.",
+  "loading": "Loading event staff…",
+  "invalidEmail": "Enter the email address of a registered account.",
+  "notices": {
+    "checkInAdded": "{name} can now check in attendees for this event in the BiletFlow mobile app.",
+    "supportAdded": "{name} can now handle and be assigned this event's support cases.",
+    "checkInRemoved": "{name} no longer has check-in access.",
+    "supportRemoved": "{name} no longer handles support. Their open cases were unassigned."
+  },
+  "checkIn": {
+    "title": "Check-in staff",
+    "badge": "Scanner",
+    "empty": "No check-in staff yet. Only you can scan tickets for this event."
+  },
+  "support": {
+    "title": "Support agents",
+    "badge": "Support",
+    "empty": "No support agents yet. Cases are assigned to you."
+  },
+  "remove": "Remove"
+}

@@ -1,0 +1,43 @@
+{
+  "MySupport": {
+    "checkingAccount": "Checking your account…",
+    "title": "Support requests",
+    "signedOutBody": "Sign in to see your support requests.",
+    "signIn": "Sign in",
+    "intro": "To open a new request, use “Request support” on an event, order or ticket page. Replies refresh automatically.",
+    "loading": "Loading your support requests…",
+    "emptyTitle": "No support requests yet",
+    "emptyBody": "Need help with a booking? Open it from <link>My Tickets</link> and choose “Request support”.",
+    "listTitle": "Requests ({count})",
+    "refresh": "Refresh",
+    "generalSupport": "General support"
+  },
+  "RequestSupport": {
+    "button": "Request support",
+    "signInToRequest": "Sign in to request support",
+    "sent": "Support request {number} sent.",
+    "follow": "Follow the conversation",
+    "categories": {
+      "ticket_delivery": "I didn't receive my ticket",
+      "payment": "Payment or charge",
+      "refund": "Refund request",
+      "seating": "Seating",
+      "event_information": "Question about the event",
+      "check_in": "Check-in or QR code problem",
+      "account": "My account",
+      "technical": "Technical problem",
+      "report_event": "Report this event to BiletFlow"
+    },
+    "invalid": "Add a short subject and describe the issue.",
+    "modalTitle": "Request support",
+    "contextEvent": "Event: {title}",
+    "contextOrder": "Order {id}",
+    "contextTicket": "Ticket {id}",
+    "reportNote": "Reports go to BiletFlow platform administrators, not the organizer.",
+    "organizerNote": "Your request goes to the event organizer's support team. You'll see their replies under Support.",
+    "categoryLabel": "What do you need help with?",
+    "subject": "Subject",
+    "message": "Describe the issue",
+    "submit": "Send support request"
+  }
+}

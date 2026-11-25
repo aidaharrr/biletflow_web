@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 export function Modal({
   title,
   children,
@@ -11,6 +12,7 @@ export function Modal({
   onClose: () => void;
   busy?: boolean;
 }) {
+  const t = useTranslations("ui");
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current!;
@@ -32,7 +34,7 @@ export function Modal({
           <h2 className="font-brand text-2xl font-semibold">{title}</h2>
           <button
             type="button"
-            aria-label="Close dialog"
+            aria-label={t("Modal.close")}
             disabled={busy}
             onClick={onClose}
             className="size-10 shrink-0 rounded-input border border-divider disabled:opacity-disabled"

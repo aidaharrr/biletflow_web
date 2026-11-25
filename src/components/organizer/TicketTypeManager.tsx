@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
 import {
   Badge,
   Button,
@@ -34,6 +35,7 @@ export function TicketTypeManager({
     [event.id],
   );
   const inventory = useApiData(load);
+  const t = useTranslations("ticketTypes");
   const [editing, setEditing] = useState<InventoryTicketType | null>(null);
   const [hiding, setHiding] = useState<InventoryTicketType | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -55,8 +57,8 @@ export function TicketTypeManager({
       setHiding(null);
       changed(
         type.is_hidden
-          ? `“${type.name}” is visible again.`
-          : `“${type.name}” is hidden. Issued tickets remain valid.`,
+          ? t("notices.visible", { name: type.name })
+          : t("notices.hidden", { name: type.name }),
       );
     } catch (error) {
       setError(error);
@@ -69,17 +71,13 @@ export function TicketTypeManager({
     <section className="space-y-lg" aria-labelledby="ticket-types-heading">
       <div className="flex flex-wrap items-center justify-between gap-md">
         <h2 id="ticket-types-heading" className="text-title">
-          Ticket types
+          {t("heading")}
         </h2>
         <Button variant="text" onClick={inventory.retry}>
-          Refresh ticket types
+          {t("refresh")}
         </Button>
       </div>
-      <p className="text-label text-text-secondary">
-        Unsold ticket types of a draft event can be edited. Hiding a ticket type
-        stops new sales but keeps issued tickets valid. To change a type that
-        has sales, hide it and add a new one to the draft.
-      </p>
+      <p className="text-label text-text-secondary">{t("intro")}</p>
       {notice && (
         <p
           role="status"
@@ -90,7 +88,7 @@ export function TicketTypeManager({
       )}
       {!!error && !editing && !hiding && <ErrorState error={error} />}
       {inventory.loading ? (
-        <LoadingSpinner label="Loading ticket types…" />
+        <LoadingSpinner label={t("loading")} />
       ) : inventory.error || !inventory.data ? (
         <ErrorState error={inventory.error} retry={inventory.retry} />
       ) : (
@@ -100,11 +98,11 @@ export function TicketTypeManager({
               <thead className="border-b border-divider bg-background text-text-secondary">
                 <tr>
                   {[
-                    "Ticket type",
-                    "Price",
-                    "Sold / quantity",
-                    "Status",
-                    "Actions",
+                    t("columns.type"),
+                    t("columns.price"),
+                    t("columns.sold"),
+                    t("columns.status"),
+                    t("columns.actions"),
                   ].map((label) => (
                     <th
                       key={label}
@@ -132,20 +130,20 @@ export function TicketTypeManager({
                     </td>
                     <td className="px-lg py-md">
                       {type.kind === "free"
-                        ? "Free"
+                        ? t("free")
                         : formatKZT(type.price_minor)}
                     </td>
                     <td className="px-lg py-md">
                       {type.sold_count} / {type.quantity}
                       {type.reserved_count > 0 && (
                         <span className="block text-text-secondary">
-                          {type.reserved_count} on hold
+                          {t("onHold", { count: type.reserved_count })}
                         </span>
                       )}
                     </td>
                     <td className="px-lg py-md">
                       <Badge variant={type.is_hidden ? "error" : "success"}>
-                        {type.is_hidden ? "Hidden" : "On sale"}
+                        {type.is_hidden ? t("hidden") : t("onSale")}
                       </Badge>
                     </td>
                     <td className="px-lg py-md">
@@ -154,17 +152,13 @@ export function TicketTypeManager({
                           variant="outlined"
                           className="px-sm text-label"
                           disabled={!type.editable || !!busy}
-                          title={
-                            type.editable
-                              ? undefined
-                              : "Only unsold ticket types of a draft event can be edited"
-                          }
+                          title={type.editable ? undefined : t("editDisabled")}
                           onClick={() => {
                             setError(null);
                             setEditing(type);
                           }}
                         >
-                          Edit
+                          {t("edit")}
                         </Button>
                         <Button
                           variant="text"
@@ -177,7 +171,7 @@ export function TicketTypeManager({
                             else setHiding(type);
                           }}
                         >
-                          {type.is_hidden ? "Restore" : "Hide"}
+                          {type.is_hidden ? t("restore") : t("hide")}
                         </Button>
                       </div>
                     </td>
@@ -187,7 +181,7 @@ export function TicketTypeManager({
             </table>
             {!inventory.data.ticket_types.length && (
               <p className="p-lg text-label text-text-secondary">
-                No ticket types yet. Add them from the event draft.
+                {t("empty")}
               </p>
             )}
           </div>
@@ -195,14 +189,15 @@ export function TicketTypeManager({
       )}
       {hiding && (
         <Modal
-          title="Hide this ticket type?"
+          title={t("hideModal.title")}
           busy={busy === hiding.id}
           onClose={() => setHiding(null)}
         >
           <p className="text-label">
-            “{hiding.name}” will no longer be offered at checkout.{" "}
-            {hiding.sold_count} issued ticket(s) stay valid for admission. You
-            can restore it later if capacity allows.
+            {t("hideModal.body", {
+              name: hiding.name,
+              count: hiding.sold_count,
+            })}
           </p>
           {!!error && <ErrorState error={error} />}
           <Button
@@ -210,7 +205,7 @@ export function TicketTypeManager({
             loading={busy === hiding.id}
             onClick={() => toggle(hiding)}
           >
-            Hide ticket type
+            {t("hideModal.confirm")}
           </Button>
         </Modal>
       )}
@@ -225,7 +220,7 @@ export function TicketTypeManager({
           onClose={() => setEditing(null)}
           onSaved={(name) => {
             setEditing(null);
-            changed(`“${name}” was updated.`);
+            changed(t("notices.updated", { name }));
           }}
         />
       )}
@@ -246,6 +241,7 @@ function EditTicketType({
   onClose: () => void;
   onSaved: (name: string) => void;
 }) {
+  const t = useTranslations("ticketTypes");
   const [kind, setKind] = useState(type.kind);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -256,19 +252,18 @@ function EditTicketType({
     const start = kazakhstanTime(String(form.get("start")));
     const end = kazakhstanTime(String(form.get("end")));
     if (!Number.isSafeInteger(quantity) || quantity < 1)
-      throw new Error("Quantity must be a positive whole number.");
+      throw new Error(t("errors.quantity"));
     if (!Number.isSafeInteger(maximum) || maximum < 1 || maximum > 50)
-      throw new Error("The per-order limit must be from 1 to 50.");
+      throw new Error(t("errors.maximum"));
     if (Date.parse(start) >= Date.parse(end))
-      throw new Error("Sales must start before they end.");
+      throw new Error(t("errors.salesOrder"));
     if (
       Date.parse(start) < Date.parse(registration.opens) ||
       Date.parse(end) > Date.parse(registration.closes)
     )
-      throw new Error("Ticket sales must fit within the registration window.");
+      throw new Error(t("errors.salesWindow"));
     const price = kind === "free" ? 0 : parseKZT(String(form.get("price")));
-    if (kind === "paid" && price <= 0)
-      throw new Error("Paid tickets need a positive KZT price.");
+    if (kind === "paid" && price <= 0) throw new Error(t("errors.paidPrice"));
     return {
       name: String(form.get("name")).trim(),
       description: String(form.get("description")).trim(),
@@ -299,11 +294,11 @@ function EditTicketType({
   }
 
   return (
-    <Modal title="Edit ticket type" busy={busy} onClose={onClose}>
+    <Modal title={t("editModal.title")} busy={busy} onClose={onClose}>
       {!!error && <ErrorState error={error} />}
       <form onSubmit={submit} className="space-y-md">
         <Input
-          label="Ticket name"
+          label={t("editModal.name")}
           name="name"
           defaultValue={type.name}
           required
@@ -311,23 +306,23 @@ function EditTicketType({
           disabled={busy}
         />
         <Textarea
-          label="Ticket description"
+          label={t("editModal.description")}
           name="description"
           defaultValue={type.description}
           disabled={busy}
         />
         <div className="grid gap-md sm:grid-cols-2">
           <Select
-            label="Ticket kind"
+            label={t("editModal.kind")}
             value={kind}
             onChange={(event) => setKind(event.target.value as "free" | "paid")}
             disabled={busy}
           >
-            <option value="free">Free</option>
-            <option value="paid">Paid</option>
+            <option value="free">{t("editModal.kindFree")}</option>
+            <option value="paid">{t("editModal.kindPaid")}</option>
           </Select>
           <Input
-            label="Price (KZT)"
+            label={t("editModal.price")}
             name="price"
             inputMode="decimal"
             defaultValue={
@@ -337,7 +332,7 @@ function EditTicketType({
             required={kind === "paid"}
           />
           <Input
-            label="Quantity"
+            label={t("editModal.quantity")}
             name="quantity"
             type="number"
             min={1}
@@ -347,7 +342,7 @@ function EditTicketType({
             disabled={busy}
           />
           <Input
-            label="Maximum per order"
+            label={t("editModal.maximum")}
             name="maximum"
             type="number"
             min={1}
@@ -358,7 +353,7 @@ function EditTicketType({
             disabled={busy}
           />
           <Input
-            label="Sales start (UTC+05:00)"
+            label={t("editModal.salesStart")}
             name="start"
             type="datetime-local"
             defaultValue={localDateInput(type.sales_start)}
@@ -366,7 +361,7 @@ function EditTicketType({
             disabled={busy}
           />
           <Input
-            label="Sales end (UTC+05:00)"
+            label={t("editModal.salesEnd")}
             name="end"
             type="datetime-local"
             defaultValue={localDateInput(type.sales_end)}
@@ -375,11 +370,10 @@ function EditTicketType({
           />
         </div>
         <p className="text-label text-text-secondary">
-          Changing a paid event&apos;s tickets requires a new admin review
-          before it can be published.
+          {t("editModal.reviewNote")}
         </p>
         <Button type="submit" loading={busy} className="w-full">
-          Save ticket type
+          {t("editModal.save")}
         </Button>
       </form>
     </Modal>

@@ -1,0 +1,86 @@
+{
+  "loading": "Loading support inbox…",
+  "status": {
+    "open": "Open",
+    "inProgress": "In Progress",
+    "waitingForCustomer": "Waiting for Customer",
+    "resolved": "Resolved"
+  },
+  "category": {
+    "reportEvent": "report event",
+    "activation": "activation",
+    "ticketDelivery": "ticket delivery",
+    "payment": "payment",
+    "refund": "refund",
+    "seating": "seating",
+    "eventInformation": "event information",
+    "checkIn": "check in",
+    "account": "account",
+    "technical": "technical"
+  },
+  "header": {
+    "eyebrow": "Keep the conversation connected",
+    "title": "Support inbox",
+    "subtitle": "Contextual conversations · Threads refresh automatically"
+  },
+  "contactPlatform": "Contact platform support",
+  "filters": {
+    "search": "Search support cases",
+    "searchPlaceholder": "Subject, category, or case ID",
+    "status": "Case status filter",
+    "allStatuses": "All statuses",
+    "event": "Case event filter",
+    "allEvents": "All events / account support"
+  },
+  "list": {
+    "title": "Cases ({count})",
+    "refresh": "Refresh inbox",
+    "accountSupport": "Account / platform support",
+    "platformRequest": "Platform request",
+    "assignedTo": "Assigned to {name}",
+    "unassigned": "Unassigned",
+    "empty": "No support cases match these filters.",
+    "selectPrompt": "Select a case to view its conversation or open a platform-support request."
+  },
+  "thread": {
+    "emptyMessage": "Write a message before sending.",
+    "meta": "Case {number} · {category}",
+    "assignedTo": "assigned to {name}",
+    "unassigned": "unassigned",
+    "eventLink": "Event: {title}",
+    "viewOrder": "View contextual order",
+    "ticket": "Ticket: {id}",
+    "loading": "Loading message thread…",
+    "messagesLabel": "Support messages",
+    "sender": {
+      "you": "You",
+      "requester": "Requester",
+      "staff": "Support staff"
+    },
+    "noMessages": "No messages yet.",
+    "replyLabel": "Reply to support case",
+    "send": "Send reply",
+    "statusLabel": "Update case status",
+    "updateStatus": "Update status",
+    "requesterNote": "Support staff update the status of your requests. Reply here to add details."
+  },
+  "newCase": {
+    "describeRequired": "Please describe the issue.",
+    "title": "Contact platform support",
+    "subject": "Support subject",
+    "category": "Issue category",
+    "eventContext": "Event context (optional)",
+    "accountIssue": "Account / platform issue",
+    "orderContext": "Order: {id}.",
+    "ticketContext": "Ticket: {id}.",
+    "message": "Describe your issue",
+    "submit": "Open support case"
+  },
+  "assignment": {
+    "loading": "Loading support staff…",
+    "label": "Assign case to",
+    "unassigned": "Unassigned",
+    "assign": "Assign",
+    "staffHint": "Add support agents from the event page under Event staff."
+  }
+}

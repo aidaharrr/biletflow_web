@@ -1,0 +1,16 @@
+{
+  "language": "Language",
+  "Navbar": {
+    "mainNavigation": "Main navigation",
+    "home": "BiletFlow home",
+    "events": "Events",
+    "myTickets": "My Tickets",
+    "organizerPortal": "Organizer portal",
+    "becomeOrganizer": "Become an organizer",
+    "adminPanel": "Admin Panel",
+    "checkingSession": "Checking session…",
+    "myProfile": "My profile",
+    "login": "Login",
+    "register": "Register"
+  }
+}

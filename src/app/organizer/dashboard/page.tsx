@@ -22,8 +22,14 @@ import { eventDate } from "@/lib/events";
 import { formatKZT } from "@/lib/money";
 import { useApiData } from "@/hooks/useApiData";
 import { cn } from "@/lib/cn";
+import { useTranslations } from "next-intl";
+import { useIntlLocale, useLabel } from "@/i18n/labels";
 export default function OrganizerDashboard() {
   const [group, setGroup] = useState<EventGroup>("Upcoming");
+  const t = useTranslations("organizer.dashboard");
+  const tStatus = useTranslations("organizer.eventStatus");
+  const label = useLabel();
+  const locale = useIntlLocale();
   const load = useCallback(async (signal: AbortSignal) => {
     const events = await listOrganizerEvents({ signal });
     const rows = await Promise.all(
@@ -45,8 +51,7 @@ export default function OrganizerDashboard() {
     return { events, rows, asOf: Date.now() };
   }, []);
   const resource = useApiData(load);
-  if (resource.loading)
-    return <LoadingSpinner label="Loading your dashboard…" />;
+  if (resource.loading) return <LoadingSpinner label={t("loading")} />;
   if (resource.error || !resource.data)
     return <ErrorState error={resource.error} retry={resource.retry} />;
   const { events, rows, asOf } = resource.data;
@@ -66,48 +71,52 @@ export default function OrganizerDashboard() {
       <header className="flex flex-wrap items-start justify-between gap-lg">
         <div className="space-y-sm">
           <p className="text-label uppercase tracking-widest text-primary">
-            Your events, at a glance
+            {t("eyebrow")}
           </p>
-          <h1 className="font-brand text-3xl font-semibold">
-            Dashboard overview
-          </h1>
-          <p className="text-label text-text-secondary">
-            All managed events · All-time metrics · Demonstration revenue in KZT
-          </p>
+          <h1 className="font-brand text-3xl font-semibold">{t("title")}</h1>
+          <p className="text-label text-text-secondary">{t("subtitle")}</p>
         </div>
         <Button variant="outlined" onClick={resource.retry}>
-          Refresh overview
+          {t("refresh")}
         </Button>
       </header>
       <div className="grid gap-md sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Total Gross Sales"
+          label={t("stats.grossLabel")}
           value={summariesComplete ? formatKZT(totals.gross) : "—"}
-          helper="Confirmed order subtotals · Sandbox"
+          helper={t("stats.grossHelper")}
           accent
         />
         <StatCard
-          label="Tickets Sold vs Capacity"
-          value={summariesComplete ? percentText(totals.soldRate) : "—"}
+          label={t("stats.soldLabel")}
+          value={summariesComplete ? percentText(totals.soldRate, locale) : "—"}
           helper={
             summariesComplete
-              ? `${totals.sold} sold / ${totals.capacity} ticket capacity`
-              : "Metrics unavailable"
+              ? t("stats.soldHelper", {
+                  sold: totals.sold,
+                  capacity: totals.capacity,
+                })
+              : t("stats.unavailable")
           }
         />
         <StatCard
-          label="Check-in Attendance Rate"
-          value={summariesComplete ? percentText(totals.attendanceRate) : "—"}
+          label={t("stats.attendanceLabel")}
+          value={
+            summariesComplete ? percentText(totals.attendanceRate, locale) : "—"
+          }
           helper={
             summariesComplete
-              ? `${totals.checked} checked in / ${totals.sold} valid tickets`
-              : "Metrics unavailable"
+              ? t("stats.attendanceHelper", {
+                  checked: totals.checked,
+                  sold: totals.sold,
+                })
+              : t("stats.unavailable")
           }
         />
         <StatCard
-          label="Active Promo Redemptions"
+          label={t("stats.promoLabel")}
           value={campaignsComplete ? redemptions : "—"}
-          helper="Redemptions in currently valid campaigns"
+          helper={t("stats.promoHelper")}
         />
       </div>
       {metricError && (
@@ -121,21 +130,21 @@ export default function OrganizerDashboard() {
           href="/organizer/events/create"
           className="inline-flex min-h-button items-center justify-center rounded-button bg-primary px-5 py-3.5 font-medium text-white"
         >
-          Create New Event
+          {t("createEvent")}
         </Link>
         <Link
           href="/organizer/campaigns?new=1"
           className="inline-flex min-h-button items-center justify-center rounded-button border border-text-primary bg-surface px-5 py-3.5 font-medium"
         >
-          Create Promo Campaign
+          {t("createCampaign")}
         </Link>
       </div>
       <section className="space-y-lg">
         <div className="flex flex-wrap items-center justify-between gap-md">
-          <h2 className="text-title">Your event portfolio</h2>
+          <h2 className="text-title">{t("portfolio")}</h2>
           <div
             role="tablist"
-            aria-label="Event lifecycle"
+            aria-label={t("lifecycle")}
             className="flex flex-wrap gap-sm"
           >
             {eventGroups.map((value) => (
@@ -173,12 +182,12 @@ export default function OrganizerDashboard() {
                     ?.focus();
                 }}
               >
-                {value} (
-                {
-                  events.filter((event) => eventGroup(event, asOf) === value)
-                    .length
-                }
-                )
+                {t("groupTab", {
+                  group: label(value),
+                  count: events.filter(
+                    (event) => eventGroup(event, asOf) === value,
+                  ).length,
+                })}
               </button>
             ))}
           </div>
@@ -188,7 +197,7 @@ export default function OrganizerDashboard() {
             className="overflow-x-auto"
             id="event-list"
             role="tabpanel"
-            aria-label={`${group} events`}
+            aria-label={t("groupPanel", { group })}
             aria-labelledby={`event-group-${group}`}
           >
             {shown.length ? (
@@ -196,18 +205,18 @@ export default function OrganizerDashboard() {
                 <thead className="border-b border-divider bg-background text-text-secondary">
                   <tr>
                     {[
-                      "Event",
-                      "Status",
-                      "Ticket sales",
-                      "Gross sales",
-                      "Actions",
-                    ].map((label) => (
+                      "event",
+                      "status",
+                      "ticketSales",
+                      "grossSales",
+                      "actions",
+                    ].map((column) => (
                       <th
-                        key={label}
+                        key={column}
                         scope="col"
                         className="px-lg py-md font-medium"
                       >
-                        {label}
+                        {t(`columns.${column}`)}
                       </th>
                     ))}
                   </tr>
@@ -226,7 +235,7 @@ export default function OrganizerDashboard() {
                           {event.title}
                         </Link>
                         <p className="mt-sm text-text-secondary">
-                          {eventDate(event)}
+                          {eventDate(event, locale)}
                         </p>
                         <p className="mt-xs text-text-secondary">
                           {event.venue.name}
@@ -242,7 +251,7 @@ export default function OrganizerDashboard() {
                                 : "neutral"
                           }
                         >
-                          {event.status}
+                          {tStatus(event.status)}
                         </Badge>
                       </td>
                       <td className="px-lg py-lg">
@@ -250,7 +259,7 @@ export default function OrganizerDashboard() {
                           <>
                             {summary.tickets_sold} / {summary.capacity}
                             <p className="mt-xs text-text-secondary">
-                              {percentText(summary.percentage_sold)}
+                              {percentText(summary.percentage_sold, locale)}
                             </p>
                           </>
                         ) : (
@@ -258,7 +267,9 @@ export default function OrganizerDashboard() {
                         )}
                       </td>
                       <td className="whitespace-nowrap px-lg py-lg">
-                        {summary ? formatKZT(summary.gross_sales_minor) : "—"}
+                        {summary
+                          ? formatKZT(summary.gross_sales_minor)
+                          : "—"}
                       </td>
                       <td className="min-w-64 px-md py-md">
                         <EventActions
@@ -272,21 +283,15 @@ export default function OrganizerDashboard() {
               </table>
             ) : (
               <div className="space-y-md p-xl">
-                <h3 className="text-title">No {group.toLowerCase()} events</h3>
+                <h3 className="text-title">{t("emptyTitle", { group })}</h3>
                 <p className="text-label text-text-secondary">
-                  {events.length
-                    ? "Choose another lifecycle tab to view your events."
-                    : "Create your first event to start welcoming attendees."}
+                  {events.length ? t("emptyOtherTab") : t("emptyFirstEvent")}
                 </p>
               </div>
             )}
           </div>
         </Card>
-        <p className="text-label text-text-secondary">
-          Drafts appear under Upcoming. Active events are published and
-          currently in progress. Completed and cancelled records remain
-          available.
-        </p>
+        <p className="text-label text-text-secondary">{t("footnote")}</p>
       </section>
     </>
   );

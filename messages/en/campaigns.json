@@ -1,0 +1,80 @@
+{
+  "loadingWorkspace": "Loading campaign workspace…",
+  "loadingCampaigns": "Loading campaigns and attributed orders…",
+  "header": {
+    "eyebrow": "Turn interest into attendance",
+    "title": "Promo campaigns",
+    "subtitle": "Server-validated discounts and trackable campaign links."
+  },
+  "eventSelect": "Campaign event",
+  "noEvents": {
+    "title": "Create an event first",
+    "body": "Every campaign belongs to an event you manage.",
+    "create": "Create New Event"
+  },
+  "create": "Create Promo Campaign",
+  "table": {
+    "columns": {
+      "campaign": "Campaign / Code",
+      "discount": "Discount",
+      "visits": "Visits",
+      "redemptions": "Redemptions",
+      "ordersTickets": "Orders / Tickets",
+      "revenue": "Gross · Discount · Net",
+      "actions": "Actions"
+    },
+    "hiddenTicketType": "Hidden ticket type",
+    "until": "Until {date}",
+    "onTypes": "On {types}",
+    "allPaidTickets": "All paid tickets",
+    "inCheckout": "{count} in checkout",
+    "qrLink": "QR / Link",
+    "edit": "Edit",
+    "saving": "Saving",
+    "disable": "Disable",
+    "enable": "Enable"
+  },
+  "empty": {
+    "title": "Your first campaign starts here",
+    "body": "Create a promo code with a validity window and redemption limit."
+  },
+  "footnote": "Figures come from confirmed BiletFlow orders: gross is the ticket subtotal, net is gross minus the promo discount (processing fees excluded). Refunded, pending, and failed orders are excluded. Visits count Campaign QR and link openings. All payments are simulated.",
+  "form": {
+    "appliesTo": "Applies to",
+    "appliesToHelp": "Leave all unchecked to discount every paid ticket type.",
+    "editTitle": "Edit {code}",
+    "createTitle": "Create Promo Campaign",
+    "intro": "For {event} · Validity times use UTC+05:00.",
+    "fixedTerms": "The code and {discount} discount cannot change; disable this campaign and create a new one instead.",
+    "name": "Campaign name",
+    "code": "Promo code",
+    "codeHelp": "A unique code, such as CAMPUS20.",
+    "discountType": "Discount type",
+    "percentage": "Percentage",
+    "fixedKzt": "Fixed KZT",
+    "discountPercent": "Discount (%)",
+    "discountKzt": "Discount (KZT)",
+    "maximum": "Maximum redemptions",
+    "validFrom": "Valid from",
+    "validUntil": "Valid until",
+    "save": "Save changes",
+    "submitCreate": "Create campaign & generate link",
+    "errors": {
+      "endBeforeStart": "The campaign must end after it starts.",
+      "limitInvalid": "The redemption limit must be a positive whole number.",
+      "discountInvalid": "Use a whole percentage from 1 to 100 or a positive KZT amount."
+    }
+  },
+  "qr": {
+    "title": "Campaign QR Code",
+    "noticeTitle": "Promotional link · Not valid for admission",
+    "noticeBody": "This code opens the event with a server-validated promotion. Admission requires an issued ticket.",
+    "generating": "Generating campaign QR…",
+    "alt": "Campaign QR Code for {code}, not an admission ticket",
+    "link": "Trackable campaign link",
+    "copyUnavailable": "Copy is unavailable. Select and copy the link above.",
+    "copied": "Link copied",
+    "copy": "Copy campaign link",
+    "download": "Download Campaign QR"
+  }
+}

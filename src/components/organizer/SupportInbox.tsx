@@ -32,6 +32,8 @@ import type {
   SupportCategory,
   SupportStatus,
 } from "@/types/api";
+import { useTranslations } from "next-intl";
+import { useIntlLocale } from "@/i18n/labels";
 const statuses: { value: SupportStatus; label: string }[] = [
   { value: "open", label: "Open" },
   { value: "in_progress", label: "In Progress" },
@@ -45,8 +47,41 @@ const platformCategories: SupportCategory[] = [
   "payment",
   "technical",
 ];
+/** English label (kept for callers outside React); UI code uses useSupportStatusLabel. */
 export const statusLabel = (value: SupportStatus) =>
   statuses.find((status) => status.value === value)?.label ?? value;
+const statusKeys: Record<SupportStatus, string> = {
+  open: "open",
+  in_progress: "inProgress",
+  waiting_for_customer: "waitingForCustomer",
+  resolved: "resolved",
+};
+/** Translated support case status; unknown API values are shown unchanged. */
+export function useSupportStatusLabel() {
+  const t = useTranslations("supportInbox.status");
+  return (value: SupportStatus) =>
+    value in statusKeys ? t(statusKeys[value]) : value;
+}
+const categoryKeys: Record<SupportCategory, string> = {
+  report_event: "reportEvent",
+  activation: "activation",
+  ticket_delivery: "ticketDelivery",
+  payment: "payment",
+  refund: "refund",
+  seating: "seating",
+  event_information: "eventInformation",
+  check_in: "checkIn",
+  account: "account",
+  technical: "technical",
+};
+/** Translated support category; unknown API values fall back to readable text. */
+export function useSupportCategoryLabel() {
+  const t = useTranslations("supportInbox.category");
+  return (value: SupportCategory) =>
+    value in categoryKeys
+      ? t(categoryKeys[value])
+      : String(value).replace(/_/g, " ");
+}
 export function SupportInbox({
   eventId = "",
   orderId,
@@ -69,8 +104,10 @@ export function SupportInbox({
   const [status, setStatus] = useState("");
   const [eventFilter, setEventFilter] = useState(eventId);
   const [creating, setCreating] = useState(false);
-  if (resource.loading)
-    return <LoadingSpinner label="Loading support inbox…" />;
+  const t = useTranslations("supportInbox");
+  const caseStatus = useSupportStatusLabel();
+  const locale = useIntlLocale();
+  if (resource.loading) return <LoadingSpinner label={t("loading")} />;
   if (!resource.data)
     return <ErrorState error={resource.error} retry={resource.retry} />;
   const { cases, events } = resource.data;
@@ -88,15 +125,17 @@ export function SupportInbox({
       <header className="flex flex-wrap items-start justify-between gap-lg">
         <div className="space-y-sm">
           <p className="text-label uppercase tracking-widest text-primary">
-            Keep the conversation connected
+            {t("header.eyebrow")}
           </p>
-          <h1 className="font-brand text-3xl font-semibold">Support inbox</h1>
+          <h1 className="font-brand text-3xl font-semibold">
+            {t("header.title")}
+          </h1>
           <p className="text-label text-text-secondary">
-            Contextual conversations · Threads refresh automatically
+            {t("header.subtitle")}
           </p>
         </div>
         <Button onClick={() => setCreating(true)}>
-          Contact platform support
+          {t("contactPlatform")}
         </Button>
       </header>
       {!!resource.error && (
@@ -104,29 +143,29 @@ export function SupportInbox({
       )}
       <div className="grid gap-md sm:grid-cols-3">
         <Input
-          label="Search support cases"
-          placeholder="Subject, category, or case ID"
+          label={t("filters.search")}
+          placeholder={t("filters.searchPlaceholder")}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
         <Select
-          label="Case status filter"
+          label={t("filters.status")}
           value={status}
           onChange={(event) => setStatus(event.target.value)}
         >
-          <option value="">All statuses</option>
+          <option value="">{t("filters.allStatuses")}</option>
           {statuses.map((status) => (
             <option key={status.value} value={status.value}>
-              {status.label}
+              {caseStatus(status.value)}
             </option>
           ))}
         </Select>
         <Select
-          label="Case event filter"
+          label={t("filters.event")}
           value={eventFilter}
           onChange={(event) => setEventFilter(event.target.value)}
         >
-          <option value="">All events / account support</option>
+          <option value="">{t("filters.allEvents")}</option>
           {events.map((event) => (
             <option key={event.id} value={event.id}>
               {event.title}
@@ -137,14 +176,16 @@ export function SupportInbox({
       <div className="grid items-start gap-lg xl:grid-cols-[300px_minmax(0,1fr)]">
         <Card className="space-y-md">
           <div className="flex items-center justify-between gap-sm">
-            <h2 className="text-title">Cases ({filtered.length})</h2>
+            <h2 className="text-title">
+              {t("list.title", { count: filtered.length })}
+            </h2>
             <Button
               variant="text"
               className="px-sm text-label"
               loading={resource.refreshing}
               onClick={resource.retry}
             >
-              Refresh inbox
+              {t("list.refresh")}
             </Button>
           </div>
           <div className="max-h-[650px] space-y-sm overflow-y-auto">
@@ -162,31 +203,31 @@ export function SupportInbox({
                 <span className="mt-sm block text-label text-text-secondary">
                   {events.find((event) => event.id === item.event_id)?.title ??
                     item.event_title ??
-                    "Account / platform support"}
+                    t("list.accountSupport")}
                 </span>
                 <span className="mt-sm flex flex-wrap gap-sm">
                   <Badge
                     variant={item.status === "resolved" ? "success" : "neutral"}
                   >
-                    {statusLabel(item.status)}
+                    {caseStatus(item.status)}
                   </Badge>
                   {item.flow === "organizer_platform" && (
-                    <Badge>Platform request</Badge>
+                    <Badge>{t("list.platformRequest")}</Badge>
                   )}
                 </span>
                 <span className="mt-sm block text-label text-text-secondary">
                   {item.assignee_name
-                    ? `Assigned to ${item.assignee_name}`
-                    : "Unassigned"}
+                    ? t("list.assignedTo", { name: item.assignee_name })
+                    : t("list.unassigned")}
                 </span>
                 <span className="mt-sm block text-label text-text-secondary">
-                  {dateLabel(item.updated_at)}
+                  {dateLabel(item.updated_at, locale)}
                 </span>
               </button>
             ))}
             {!filtered.length && (
               <p className="py-lg text-label text-text-secondary">
-                No support cases match these filters.
+                {t("list.empty")}
               </p>
             )}
           </div>
@@ -201,8 +242,7 @@ export function SupportInbox({
         ) : (
           <Card>
             <p className="text-label text-text-secondary">
-              Select a case to view its conversation or open a platform-support
-              request.
+              {t("list.selectPrompt")}
             </p>
           </Card>
         )}
@@ -239,6 +279,10 @@ export function SupportThread({
   onUpdated: () => void;
 }) {
   const { user } = useAuth();
+  const t = useTranslations("supportInbox.thread");
+  const caseStatus = useSupportStatusLabel();
+  const categoryLabel = useSupportCategoryLabel();
+  const locale = useIntlLocale();
   const load = useCallback(
     (signal: AbortSignal) => listSupportMessages(supportCase.id, { signal }),
     [supportCase.id],
@@ -255,7 +299,7 @@ export function SupportThread({
     submit.preventDefault();
     const message = body.trim();
     if (!message) {
-      setError(new Error("Write a message before sending."));
+      setError(new Error(t("emptyMessage")));
       return;
     }
     if (key.current?.body !== message)
@@ -284,20 +328,23 @@ export function SupportThread({
           <Badge
             variant={supportCase.status === "resolved" ? "success" : "neutral"}
           >
-            {statusLabel(supportCase.status)}
+            {caseStatus(supportCase.status)}
           </Badge>
         </div>
         <p className="break-all text-label text-text-secondary">
-          Case {supportCase.number ?? supportCase.id} ·{" "}
-          {supportCase.category.replace(/_/g, " ")} ·{" "}
+          {t("meta", {
+            number: String(supportCase.number ?? supportCase.id),
+            category: categoryLabel(supportCase.category),
+          })}{" "}
+          ·{" "}
           {supportCase.assignee_name
-            ? `assigned to ${supportCase.assignee_name}`
-            : "unassigned"}
+            ? t("assignedTo", { name: supportCase.assignee_name })
+            : t("unassigned")}
         </p>
         <div className="flex flex-wrap gap-md text-label">
           {event ? (
             <Link href={`/organizer/events/${event.id}`} className="underline">
-              Event: {event.title}
+              {t("eventLink", { title: event.title })}
             </Link>
           ) : (
             supportCase.event_id &&
@@ -306,7 +353,7 @@ export function SupportThread({
                 href={`/events/${supportCase.event_id}`}
                 className="underline"
               >
-                Event: {supportCase.event_title}
+                {t("eventLink", { title: supportCase.event_title })}
               </Link>
             )
           )}
@@ -315,22 +362,22 @@ export function SupportThread({
               href={`/orders/${supportCase.order_id}`}
               className="underline"
             >
-              View contextual order
+              {t("viewOrder")}
             </Link>
           )}
           {supportCase.ticket_id && (
             <span className="break-all text-text-secondary">
-              Ticket: {supportCase.ticket_id}
+              {t("ticket", { id: supportCase.ticket_id })}
             </span>
           )}
         </div>
       </header>
       {resource.loading ? (
-        <LoadingSpinner label="Loading message thread…" />
+        <LoadingSpinner label={t("loading")} />
       ) : (
         <>
           <div
-            aria-label="Support messages"
+            aria-label={t("messagesLabel")}
             role="log"
             aria-live="polite"
             aria-relevant="additions"
@@ -345,10 +392,10 @@ export function SupportThread({
                 >
                   <p className="mb-sm text-label font-medium">
                     {message.sender_id === user?.id
-                      ? "You"
+                      ? t("sender.you")
                       : message.sender_id === supportCase.requester_id
-                        ? "Requester"
-                        : "Support staff"}
+                        ? t("sender.requester")
+                        : t("sender.staff")}
                   </p>
                   <p className="whitespace-pre-wrap break-words text-label">
                     {message.body}
@@ -357,12 +404,14 @@ export function SupportThread({
                     dateTime={message.created_at}
                     className="mt-sm block text-label text-text-secondary"
                   >
-                    {dateLabel(message.created_at)}
+                    {dateLabel(message.created_at, locale)}
                   </time>
                 </article>
               ))}
             {resource.data?.length === 0 && (
-              <p className="text-label text-text-secondary">No messages yet.</p>
+              <p className="text-label text-text-secondary">
+                {t("noMessages")}
+              </p>
             )}
           </div>
           {!!resource.error && (
@@ -373,7 +422,7 @@ export function SupportThread({
       {!!error && <ErrorState error={error} />}
       <form onSubmit={reply} className="space-y-md">
         <Textarea
-          label="Reply to support case"
+          label={t("replyLabel")}
           value={body}
           onChange={(event) => setBody(event.target.value)}
           required
@@ -381,7 +430,7 @@ export function SupportThread({
           disabled={busy}
         />
         <Button type="submit" loading={busy} disabled={!body.trim()}>
-          Send reply
+          {t("send")}
         </Button>
       </form>
       {mayUpdate && (
@@ -390,7 +439,7 @@ export function SupportThread({
       {mayUpdate ? (
         <div className="grid items-end gap-md sm:grid-cols-[1fr_auto]">
           <Select
-            label="Update case status"
+            label={t("statusLabel")}
             value={nextStatus}
             onChange={(event) =>
               setNextStatus(event.target.value as SupportStatus)
@@ -399,7 +448,7 @@ export function SupportThread({
           >
             {statuses.map((status) => (
               <option key={status.value} value={status.value}>
-                {status.label}
+                {caseStatus(status.value)}
               </option>
             ))}
           </Select>
@@ -419,14 +468,11 @@ export function SupportThread({
               }
             }}
           >
-            Update status
+            {t("updateStatus")}
           </Button>
         </div>
       ) : (
-        <p className="text-label text-text-secondary">
-          Support staff update the status of your requests. Reply here to add
-          details.
-        </p>
+        <p className="text-label text-text-secondary">{t("requesterNote")}</p>
       )}
     </Card>
   );
@@ -447,6 +493,8 @@ function NewCase({
   onCreated: (item: SupportCase) => void;
 }) {
   const [selectedEvent, setSelectedEvent] = useState(eventId);
+  const t = useTranslations("supportInbox.newCase");
+  const categoryLabel = useSupportCategoryLabel();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const request = useRef<{ signature: string; key: string } | null>(null);
@@ -457,7 +505,7 @@ function NewCase({
     try {
       const form = new FormData(event.currentTarget);
       const message = String(form.get("message")).trim();
-      if (!message) throw new Error("Please describe the issue.");
+      if (!message) throw new Error(t("describeRequired"));
       const body = {
         flow: "organizer_platform" as const,
         subject: String(form.get("subject")).trim(),
@@ -479,11 +527,11 @@ function NewCase({
     }
   }
   return (
-    <Modal title="Contact platform support" busy={busy} onClose={onClose}>
+    <Modal title={t("title")} busy={busy} onClose={onClose}>
       {!!error && <ErrorState error={error} />}
       <form onSubmit={submit} className="space-y-md">
         <Input
-          label="Support subject"
+          label={t("subject")}
           name="subject"
           minLength={3}
           maxLength={200}
@@ -491,24 +539,24 @@ function NewCase({
           disabled={busy}
         />
         <Select
-          label="Issue category"
+          label={t("category")}
           name="category"
           defaultValue="technical"
           disabled={busy}
         >
           {platformCategories.map((category) => (
             <option key={category} value={category}>
-              {category.replace(/_/g, " ")}
+              {categoryLabel(category)}
             </option>
           ))}
         </Select>
         <Select
-          label="Event context (optional)"
+          label={t("eventContext")}
           value={selectedEvent}
           onChange={(event) => setSelectedEvent(event.target.value)}
           disabled={busy}
         >
-          <option value="">Account / platform issue</option>
+          <option value="">{t("accountIssue")}</option>
           {events.map((event) => (
             <option key={event.id} value={event.id}>
               {event.title}
@@ -517,19 +565,19 @@ function NewCase({
         </Select>
         {selectedEvent === eventId && (orderId || ticketId) && (
           <p className="break-all text-label text-text-secondary">
-            {orderId && `Order: ${orderId}. `}
-            {ticketId && `Ticket: ${ticketId}.`}
+            {orderId && `${t("orderContext", { id: orderId })} `}
+            {ticketId && t("ticketContext", { id: ticketId })}
           </p>
         )}
         <Textarea
-          label="Describe your issue"
+          label={t("message")}
           name="message"
           required
           maxLength={10000}
           disabled={busy}
         />
         <Button type="submit" loading={busy} className="w-full">
-          Open support case
+          {t("submit")}
         </Button>
       </form>
     </Modal>
@@ -550,21 +598,22 @@ function CaseAssignment({
   );
   const people = useApiData(load);
   const [choice, setChoice] = useState(supportCase.assigned_to ?? "");
+  const t = useTranslations("supportInbox.assignment");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  if (people.loading) return <LoadingSpinner label="Loading support staff…" />;
+  if (people.loading) return <LoadingSpinner label={t("loading")} />;
   if (people.error || !people.data)
     return <ErrorState error={people.error} retry={people.retry} />;
   return (
     <div className="space-y-sm">
       <div className="grid items-end gap-md sm:grid-cols-[1fr_auto]">
         <Select
-          label="Assign case to"
+          label={t("label")}
           value={choice}
           onChange={(event) => setChoice(event.target.value)}
           disabled={busy}
         >
-          <option value="">Unassigned</option>
+          <option value="">{t("unassigned")}</option>
           {people.data.map((person) => (
             <option key={person.id} value={person.id}>
               {person.name}
@@ -588,13 +637,11 @@ function CaseAssignment({
             }
           }}
         >
-          Assign
+          {t("assign")}
         </Button>
       </div>
       {supportCase.event_id && (
-        <p className="text-label text-text-secondary">
-          Add support agents from the event page under Event staff.
-        </p>
+        <p className="text-label text-text-secondary">{t("staffHint")}</p>
       )}
       {!!error && <ErrorState error={error} />}
     </div>

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import { EmailVerificationBanner } from "@/components/auth/AccountEmailForms";
 import { AuthProvider } from "@/components/auth/AuthProvider";
@@ -12,30 +14,32 @@ import "@fontsource/montserrat/600.css";
 import "@fontsource/montserrat/800.css";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "BiletFlow",
-  description: "Self-service event ticketing for Kazakhstan.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common");
+  return { title: "BiletFlow", description: t("metaDescription") };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang={await getLocale()}>
       <body>
-        <AuthProvider>
-          <Suspense
-            fallback={
-              <header className="h-20 border-b border-divider bg-surface" />
-            }
-          >
-            <Navbar />
-          </Suspense>
-          <EmailVerificationBanner />
-          {children}
-        </AuthProvider>
+        <NextIntlClientProvider>
+          <AuthProvider>
+            <Suspense
+              fallback={
+                <header className="h-20 border-b border-divider bg-surface" />
+              }
+            >
+              <Navbar />
+            </Suspense>
+            <EmailVerificationBanner />
+            {children}
+          </AuthProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

@@ -2,21 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { cn } from "@/lib/cn";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 export function Navbar() {
   const pathname = usePathname();
   const { user, loading } = useAuth();
+  const t = useTranslations("nav");
   return (
     <header className="border-b border-divider bg-surface print:hidden">
       <nav
-        aria-label="Main navigation"
+        aria-label={t("Navbar.mainNavigation")}
         className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-md px-md py-md sm:px-lg lg:px-xl"
       >
         <Link
           href="/events"
-          aria-label="BiletFlow home"
+          aria-label={t("Navbar.home")}
           className="font-brand text-2xl font-extrabold tracking-tight"
         >
           <span className="text-primary">Bilet</span>Flow
@@ -30,7 +33,7 @@ export function Navbar() {
               pathname.startsWith("/events") && "text-primary",
             )}
           >
-            Events
+            {t("Navbar.events")}
           </Link>
           <Link
             href="/tickets"
@@ -40,14 +43,14 @@ export function Navbar() {
               pathname === "/tickets" && "text-primary",
             )}
           >
-            My Tickets
+            {t("Navbar.myTickets")}
           </Link>
           {user?.roles.includes("organizer") && (
             <Link
               href="/organizer/dashboard"
               className="py-sm font-medium text-primary md:hidden"
             >
-              Organizer portal
+              {t("Navbar.organizerPortal")}
             </Link>
           )}
           {user &&
@@ -63,7 +66,7 @@ export function Navbar() {
                   pathname === "/become-organizer" && "text-primary",
                 )}
               >
-                Become an organizer
+                {t("Navbar.becomeOrganizer")}
               </Link>
             )}
           {user?.roles.includes("platform_admin") && (
@@ -72,40 +75,41 @@ export function Navbar() {
               aria-current={pathname.startsWith("/admin") ? "page" : undefined}
               className="py-sm font-medium text-primary"
             >
-              Admin Panel
+              {t("Navbar.adminPanel")}
             </Link>
           )}
         </div>
-        <div className="flex items-center gap-md text-label">
+        <div className="flex flex-wrap items-center gap-md text-label">
+          <LanguageSwitcher />
           {user?.roles.includes("organizer") && (
             <Link
               href="/organizer/dashboard"
               className="hidden font-medium text-primary md:inline-block"
             >
-              Organizer portal
+              {t("Navbar.organizerPortal")}
             </Link>
           )}
           {loading ? (
             <span className="text-text-secondary" role="status">
-              Checking session…
+              {t("Navbar.checkingSession")}
             </span>
           ) : user ? (
             <Link
               href="/tickets"
               className="rounded-button border border-divider px-md py-3 font-medium hover:border-primary"
             >
-              {user.full_name || "My profile"}
+              {user.full_name || t("Navbar.myProfile")}
             </Link>
           ) : (
             <>
               <Link href="/login" className="font-medium hover:text-primary">
-                Login
+                {t("Navbar.login")}
               </Link>
               <Link
                 href="/register"
                 className="rounded-button bg-primary px-md py-3 font-medium text-white hover:brightness-95"
               >
-                Register
+                {t("Navbar.register")}
               </Link>
             </>
           )}

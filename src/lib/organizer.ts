@@ -1,3 +1,4 @@
+import { mediumDateTime } from "./datetime";
 import { formatKZT } from "./money";
 import type {
   CampaignState,
@@ -27,8 +28,8 @@ export function eventGroup(event: Event, now = Date.now()): EventGroup {
 }
 export const percentage = (value: number, total: number) =>
   total > 0 ? (value * 100) / total : 0;
-export const percentText = (value: number) =>
-  `${new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 }).format(value)}%`;
+export const percentText = (value: number, locale = "en-GB") =>
+  `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value)}%`;
 export function aggregateSummaries(rows: OrganizerSummary[]) {
   const capacity = rows.reduce((sum, row) => sum + row.capacity, 0);
   const sold = rows.reduce((sum, row) => sum + row.tickets_sold, 0);
@@ -93,12 +94,8 @@ export function kazakhstanTime(value: string): string {
 export function localDateInput(value: string): string {
   return new Date(Date.parse(value) + 5 * 3600000).toISOString().slice(0, 16);
 }
-export function dateLabel(value: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Almaty",
-  }).format(new Date(value));
+export function dateLabel(value: string, locale = "en-GB") {
+  return mediumDateTime(new Date(value), locale, "Asia/Almaty");
 }
 export function filterSales(rows: SalesPoint[], from: string, to: string) {
   return rows.filter(

@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
+import { useErrorText } from "@/i18n/labels";
 import { Button, Card, Input } from "@/components/ui";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -26,6 +28,7 @@ function Shell({
 
 export function VerifyEmail({ token }: { token: string }) {
   const { user, refresh } = useAuth();
+  const t = useTranslations("auth");
   const [state, setState] = useState<{
     status: "pending" | "verified" | "failed";
     error?: unknown;
@@ -44,42 +47,41 @@ export function VerifyEmail({ token }: { token: string }) {
       .catch((error) => setState({ status: "failed", error }));
   }, [token, refresh]);
   if (state.status === "pending")
-    return <LoadingSpinner label="Verifying your email…" />;
+    return <LoadingSpinner label={t("VerifyEmail.verifying")} />;
   if (state.status === "verified")
     return (
-      <Shell title="Email verified">
+      <Shell title={t("VerifyEmail.verifiedTitle")}>
         <p role="status" className="text-text-secondary">
-          Thank you. Your email address is confirmed.
+          {t("VerifyEmail.verifiedBody")}
         </p>
         <Link
           href={user ? "/events" : "/login"}
           className="block rounded-button bg-primary px-5 py-3.5 text-center font-medium text-white"
         >
-          {user ? "Continue to events" : "Sign in"}
+          {user ? t("VerifyEmail.continueToEvents") : t("VerifyEmail.signIn")}
         </Link>
       </Shell>
     );
   return (
-    <Shell title="Verification link not valid">
+    <Shell title={t("VerifyEmail.invalidTitle")}>
       {state.error ? (
         <ErrorState error={state.error} />
       ) : (
-        <p className="text-error">
-          This verification link is missing its token.
-        </p>
+        <p className="text-error">{t("VerifyEmail.missingToken")}</p>
       )}
       <p className="text-label text-text-secondary">
-        Links expire after 24 hours. Sign in and use “Resend verification email”
-        to get a new one.
+        {t("VerifyEmail.expiryHint")}
       </p>
       <Link href="/login" className="font-medium underline">
-        Go to sign in
+        {t("VerifyEmail.goToSignIn")}
       </Link>
     </Shell>
   );
 }
 
 export function ForgotPasswordForm() {
+  const t = useTranslations("auth");
+  const errorText = useErrorText();
   const [pending, setPending] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
@@ -93,7 +95,11 @@ export function ForgotPasswordForm() {
         "forgot-password",
         { email },
       );
-      setSent(result?.message ?? "If the account exists, we sent an email.");
+      setSent(
+        result?.message
+          ? errorText(result.message)
+          : t("ForgotPassword.sentFallback"),
+      );
     } catch (error) {
       setError(error);
     } finally {
@@ -101,25 +107,25 @@ export function ForgotPasswordForm() {
     }
   }
   return (
-    <Shell title="Reset your password">
+    <Shell title={t("ForgotPassword.title")}>
       {sent ? (
         <>
           <p role="status" className="text-text-secondary">
-            {sent} The link expires in 30 minutes and can be used once.
+            {sent} {t("ForgotPassword.linkExpiry")}
           </p>
           <Link href="/login" className="font-medium underline">
-            Back to sign in
+            {t("ForgotPassword.backToSignIn")}
           </Link>
         </>
       ) : (
         <>
           <p className="text-label text-text-secondary">
-            Enter your account email and we will send you a reset link.
+            {t("ForgotPassword.intro")}
           </p>
           {!!error && <ErrorState error={error} />}
           <form onSubmit={submit} className="space-y-lg">
             <Input
-              label="Email"
+              label={t("ForgotPassword.email")}
               name="email"
               type="email"
               required
@@ -127,11 +133,11 @@ export function ForgotPasswordForm() {
               disabled={pending}
             />
             <Button type="submit" className="w-full" loading={pending}>
-              Send reset link
+              {t("ForgotPassword.submit")}
             </Button>
           </form>
           <Link href="/login" className="text-label underline">
-            Back to sign in
+            {t("ForgotPassword.backToSignIn")}
           </Link>
         </>
       )}
@@ -140,6 +146,7 @@ export function ForgotPasswordForm() {
 }
 
 export function ResetPasswordForm({ token }: { token: string }) {
+  const t = useTranslations("auth");
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -148,7 +155,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
     const form = new FormData(event.currentTarget);
     const password = String(form.get("password"));
     if (password !== String(form.get("confirm"))) {
-      setError(new Error("The passwords do not match."));
+      setError(new Error(t("ResetPassword.mismatch")));
       return;
     }
     setPending(true);
@@ -164,40 +171,40 @@ export function ResetPasswordForm({ token }: { token: string }) {
   }
   if (!token)
     return (
-      <Shell title="Reset link not valid">
-        <p className="text-error">This reset link is missing its token.</p>
+      <Shell title={t("ResetPassword.invalidTitle")}>
+        <p className="text-error">{t("ResetPassword.missingToken")}</p>
         <Link href="/forgot-password" className="font-medium underline">
-          Request a new link
+          {t("ResetPassword.requestNewLink")}
         </Link>
       </Shell>
     );
   if (done)
     return (
-      <Shell title="Password changed">
+      <Shell title={t("ResetPassword.doneTitle")}>
         <p role="status" className="text-text-secondary">
-          Your password was updated and other sessions were signed out.
+          {t("ResetPassword.doneBody")}
         </p>
         <Link
           href="/login"
           className="block rounded-button bg-primary px-5 py-3.5 text-center font-medium text-white"
         >
-          Sign in
+          {t("ResetPassword.signIn")}
         </Link>
       </Shell>
     );
   return (
-    <Shell title="Choose a new password">
+    <Shell title={t("ResetPassword.title")}>
       {!!error && (
         <>
           <ErrorState error={error} />
           <Link href="/forgot-password" className="text-label underline">
-            Request a new link
+            {t("ResetPassword.requestNewLink")}
           </Link>
         </>
       )}
       <form onSubmit={submit} className="space-y-lg">
         <Input
-          label="New password"
+          label={t("ResetPassword.newPassword")}
           name="password"
           type="password"
           required
@@ -205,10 +212,10 @@ export function ResetPasswordForm({ token }: { token: string }) {
           maxLength={128}
           autoComplete="new-password"
           disabled={pending}
-          helperText="At least 8 characters."
+          helperText={t("ResetPassword.passwordHelper")}
         />
         <Input
-          label="Confirm new password"
+          label={t("ResetPassword.confirmPassword")}
           name="confirm"
           type="password"
           required
@@ -218,7 +225,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
           disabled={pending}
         />
         <Button type="submit" className="w-full" loading={pending}>
-          Update password
+          {t("ResetPassword.submit")}
         </Button>
       </form>
     </Shell>
@@ -227,6 +234,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
 export function EmailVerificationBanner() {
   const { user } = useAuth();
+  const t = useTranslations("auth");
   const [pending, setPending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -248,20 +256,24 @@ export function EmailVerificationBanner() {
   return (
     <div
       role="region"
-      aria-label="Email verification"
+      aria-label={t("VerificationBanner.region")}
       className="border-b border-primary/30 bg-primary/5 print:hidden"
     >
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-md px-md py-sm text-label sm:px-lg lg:px-xl">
         <p>
           {sent ? (
             <span role="status">
-              Verification email sent to <strong>{user.email}</strong>. Check
-              your inbox.
+              {t.rich("VerificationBanner.sent", {
+                email: user.email,
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}
             </span>
           ) : (
             <>
-              Please verify <strong>{user.email}</strong>. Organizers must
-              verify before publishing events.
+              {t.rich("VerificationBanner.prompt", {
+                email: user.email,
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}
             </>
           )}
         </p>
@@ -270,10 +282,10 @@ export function EmailVerificationBanner() {
             variant="text"
             className="text-label"
             loading={pending}
-            loadingLabel="Sending"
+            loadingLabel={t("VerificationBanner.sending")}
             onClick={resend}
           >
-            Resend verification email
+            {t("VerificationBanner.resend")}
           </Button>
         )}
         {!!error && (

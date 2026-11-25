@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
+import { useIntlLocale } from "@/i18n/labels";
 import { Badge, Button, Card, Input, Modal, Textarea } from "@/components/ui";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -17,12 +19,16 @@ import { useApiData } from "@/hooks/useApiData";
 import { cn } from "@/lib/cn";
 import type { AdminEvent } from "@/types/api";
 const filters = [
-  ["", "All events"],
-  ["published", "Published"],
-  ["draft", "Draft"],
-  ["suspended", "Suspended"],
-];
+  ["", "all"],
+  ["published", "published"],
+  ["draft", "draft"],
+  ["suspended", "suspended"],
+] as const;
 export function AdminEvents({ initialEventId }: { initialEventId: string }) {
+  const t = useTranslations("admin.events");
+  const locale = useIntlLocale();
+  const statusText = (status: string) =>
+    t.has(`status.${status}`) ? t(`status.${status}`) : status;
   const { api, mode, revision, refresh, href } = useAdmin();
   const [filter, setFilter] = useState("");
   const [query, setQuery] = useState("");
@@ -50,7 +56,7 @@ export function AdminEvents({ initialEventId }: { initialEventId: string }) {
       new FormData(event.currentTarget).get("reason"),
     ).trim();
     if (reason.length < 3) {
-      setError(new Error("Enter a suspension reason."));
+      setError(new Error(t("reasonRequired")));
       return;
     }
     setBusy(true);
@@ -62,11 +68,12 @@ export function AdminEvents({ initialEventId }: { initialEventId: string }) {
         key(`${selected.event.id}:${reason}`),
       );
       if (!result.event_hidden || !result.paid_sales_stopped)
-        throw new Error(
-          "Full event suspension was not confirmed. Refresh the event before retrying.",
-        );
+        throw new Error(t("notConfirmed"));
       setNotice(
-        `${mode === "demo" ? "Demo: " : ""}${selected.event.title} was hidden from public discovery. New checkout and paid sales are stopped.`,
+        t("suspendedNotice", {
+          prefix: mode === "demo" ? t("demoPrefix") : "",
+          title: selected.event.title,
+        }),
       );
       setSelected(null);
       refresh();
@@ -83,15 +90,11 @@ export function AdminEvents({ initialEventId }: { initialEventId: string }) {
     setError(null);
     if (partial) refresh();
   }
-  if (resource.loading)
-    return <LoadingSpinner label="Loading platform events…" />;
+  if (resource.loading) return <LoadingSpinner label={t("loading")} />;
   if (resource.error || !resource.data)
     return (
       <>
-        <AdminHeader
-          title="Event moderation"
-          description="Review platform events and hide listings that violate platform terms."
-        />
+        <AdminHeader title={t("title")} description={t("errorDescription")} />
         <AdminErrorState error={resource.error} retry={resource.retry} />
       </>
     );
@@ -101,11 +104,11 @@ export function AdminEvents({ initialEventId }: { initialEventId: string }) {
   return (
     <>
       <AdminHeader
-        title="Event moderation"
-        description="Review platform events, inspect drafts, and suspend listings that violate platform terms."
+        title={t("title")}
+        description={t("description")}
         action={
           <Button variant="outlined" onClick={resource.retry}>
-            Refresh events
+            {t("refresh")}
           </Button>
         }
       />
@@ -125,29 +128,26 @@ export function AdminEvents({ initialEventId }: { initialEventId: string }) {
         className="grid items-end gap-md sm:grid-cols-[1fr_auto]"
       >
         <Input
-          label="Search events by title"
-          placeholder="Enter an event title"
+          label={t("searchLabel")}
+          placeholder={t("searchPlaceholder")}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
         />
         <Button type="submit" variant="outlined">
-          Search events
+          {t("search")}
         </Button>
       </form>
       {initialEventId && (
         <Card className="flex flex-wrap items-center justify-between gap-md">
           <p className="break-all text-label">
-            Focused event: {initialEventId}
+            {t("focused", { id: initialEventId })}
           </p>
           <Link href={href("/admin/events")} className="text-label underline">
-            Show all events
+            {t("showAll")}
           </Link>
         </Card>
       )}
-      <div
-        aria-label="Filter platform events"
-        className="flex flex-wrap gap-sm"
-      >
+      <div aria-label={t("filterLabel")} className="flex flex-wrap gap-sm">
         {filters.map(([value, label]) => (
           <button
             type="button"
@@ -159,32 +159,35 @@ export function AdminEvents({ initialEventId }: { initialEventId: string }) {
             )}
             onClick={() => setFilter(value)}
           >
-            {label}
+            {t(`filters.${label}`)}
           </button>
         ))}
       </div>
       {mode === "live" && resource.data.length >= 100 && (
-        <p className="text-label text-text-secondary">
-          Results are limited to 100 records by the current directory. Search an
-          event title to narrow the list.
-        </p>
+        <p className="text-label text-text-secondary">{t("limitNotice")}</p>
       )}
       <Card className="overflow-hidden p-0">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px] text-left text-label">
             <thead className="border-b border-divider bg-background text-text-secondary">
               <tr>
-                {["Event", "Organizer", "Status", "Visibility", "Actions"].map(
-                  (label) => (
-                    <th
-                      key={label}
-                      scope="col"
-                      className="px-lg py-md font-medium"
-                    >
-                      {label}
-                    </th>
-                  ),
-                )}
+                {(
+                  [
+                    "event",
+                    "organizer",
+                    "status",
+                    "visibility",
+                    "actions",
+                  ] as const
+                ).map((column) => (
+                  <th
+                    key={column}
+                    scope="col"
+                    className="px-lg py-md font-medium"
+                  >
+                    {t(`columns.${column}`)}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -199,7 +202,7 @@ export function AdminEvents({ initialEventId }: { initialEventId: string }) {
                     <td className="max-w-72 px-lg py-lg">
                       <p className="font-medium">{event.title}</p>
                       <p className="mt-xs text-text-secondary">
-                        {eventDate(event)}
+                        {eventDate(event, locale)}
                       </p>
                       <p className="mt-xs text-text-secondary">
                         {event.venue.name}
@@ -218,23 +221,23 @@ export function AdminEvents({ initialEventId }: { initialEventId: string }) {
                         className="capitalize"
                       >
                         {fullySuspended
-                          ? "Suspended"
+                          ? t("suspendedBadge")
                           : suspended
-                            ? "Sales suspended"
-                            : event.status}
+                            ? t("salesSuspended")
+                            : statusText(event.status)}
                       </Badge>
                       {suspended && !isHiddenEvent(event) && (
                         <p className="mt-sm text-label text-error">
-                          Visibility needs review
+                          {t("visibilityReview")}
                         </p>
                       )}
                     </td>
                     <td className="px-lg py-lg">
                       {isHiddenEvent(event)
-                        ? "Hidden from public"
+                        ? t("hidden")
                         : event.visibility === "unlisted"
-                          ? "Unlisted link"
-                          : "Public listing"}
+                          ? t("unlisted")
+                          : t("public")}
                     </td>
                     <td className="px-lg py-md">
                       <div className="flex flex-wrap gap-sm">
@@ -246,7 +249,7 @@ export function AdminEvents({ initialEventId }: { initialEventId: string }) {
                             setSelected({ event, action: "review" });
                           }}
                         >
-                          Review event
+                          {t("reviewEvent")}
                         </Button>
                         <Button
                           variant="outlined"
@@ -258,8 +261,8 @@ export function AdminEvents({ initialEventId }: { initialEventId: string }) {
                           }}
                         >
                           {suspended && !fullySuspended
-                            ? "Complete suspension"
-                            : "Suspend Event"}
+                            ? t("completeSuspension")
+                            : t("suspendEvent")}
                         </Button>
                       </div>
                     </td>
@@ -270,24 +273,23 @@ export function AdminEvents({ initialEventId }: { initialEventId: string }) {
           </table>
           {!shown.length && (
             <div className="space-y-sm p-xl">
-              <h2 className="text-title">No matching events</h2>
+              <h2 className="text-title">{t("noMatchTitle")}</h2>
               <p className="text-label text-text-secondary">
-                Try another filter or search title.
+                {t("noMatchBody")}
               </p>
             </div>
           )}
         </div>
       </Card>
       <p className="text-label text-text-secondary">
-        Suspension hides the event and stops new checkout. Existing tickets and
-        historical orders remain available for a separate policy decision.
+        {t("suspensionFootnote")}
       </p>
       {selected && (
         <Modal
           title={
             selected.action === "suspend"
-              ? "Suspend this event?"
-              : "Event moderation details"
+              ? t("suspendModalTitle")
+              : t("detailsModalTitle")
           }
           busy={busy}
           onClose={close}
@@ -295,24 +297,24 @@ export function AdminEvents({ initialEventId }: { initialEventId: string }) {
           <h3 className="text-title">{selected.event.title}</h3>
           <dl className="space-y-md text-label">
             <div>
-              <dt className="text-text-secondary">Organizer</dt>
+              <dt className="text-text-secondary">{t("organizer")}</dt>
               <dd className="mt-xs">{selected.event.organizer_name}</dd>
             </div>
             <div>
-              <dt className="text-text-secondary">Date and venue</dt>
+              <dt className="text-text-secondary">{t("dateVenue")}</dt>
               <dd className="mt-xs">
-                {eventDate(selected.event)} · {selected.event.venue.name},{" "}
-                {selected.event.venue.address}
+                {eventDate(selected.event, locale)} ·{" "}
+                {selected.event.venue.name}, {selected.event.venue.address}
               </dd>
             </div>
             <div>
-              <dt className="text-text-secondary">Event ID</dt>
+              <dt className="text-text-secondary">{t("eventId")}</dt>
               <dd className="mt-xs break-all">{selected.event.id}</dd>
             </div>
           </dl>
           {selected.event.suspension_reason && (
             <Card className="space-y-sm">
-              <p className="font-medium">Suspension reason</p>
+              <p className="font-medium">{t("suspensionReason")}</p>
               <p className="whitespace-pre-wrap break-words text-label">
                 {selected.event.suspension_reason}
               </p>
@@ -322,11 +324,10 @@ export function AdminEvents({ initialEventId }: { initialEventId: string }) {
           {selected.action === "suspend" ? (
             <form onSubmit={suspend} className="space-y-md">
               <p className="text-label text-text-secondary">
-                Hide this listing and stop new registrations and purchases. This
-                action does not automatically cancel or refund issued tickets.
+                {t("suspendHelp")}
               </p>
               <Textarea
-                label="Event suspension reason"
+                label={t("reasonLabel")}
                 name="reason"
                 required
                 minLength={3}
@@ -335,12 +336,11 @@ export function AdminEvents({ initialEventId }: { initialEventId: string }) {
               />
               {mode === "live" && (
                 <p className="text-label text-text-secondary">
-                  The current live audit records the suspension action but does
-                  not yet retain custom reasons.
+                  {t("liveReasonNotice")}
                 </p>
               )}
               <Button type="submit" loading={busy} className="w-full bg-error">
-                Confirm event suspension
+                {t("confirm")}
               </Button>
             </form>
           ) : (
@@ -351,7 +351,7 @@ export function AdminEvents({ initialEventId }: { initialEventId: string }) {
                 variant="outlined"
                 onClick={() => setSelected({ ...selected, action: "suspend" })}
               >
-                Suspend Event
+                {t("suspendEvent")}
               </Button>
             )
           )}

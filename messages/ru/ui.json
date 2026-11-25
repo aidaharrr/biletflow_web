@@ -1,0 +1,15 @@
+{
+  "Button": {
+    "loading": "Загрузка"
+  },
+  "LoadingSpinner": {
+    "loading": "Загрузка…"
+  },
+  "Modal": {
+    "close": "Закрыть окно"
+  },
+  "ErrorState": {
+    "tryAgain": "Повторить",
+    "signIn": "Войти"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "EventsPage": {
+    "eyebrow": "Жоспар құрыңыз. Естеліктер жинаңыз.",
+    "title": "Жаңа әсерлеріңізді табыңыз.",
+    "subtitle": "Іс-шараларды тауып, ортаңызды кеңейтіңіз және маңызды сәттерден қалмаңыз.",
+    "filterAria": "Іс-шараларды сүзу",
+    "searchLabel": "Іс-шараларды іздеу",
+    "searchPlaceholder": "Іс-шара немесе өтетін орын бойынша іздеу",
+    "categoriesAria": "Іс-шара санаттары",
+    "categories": {
+      "All": "Барлығы",
+      "Concerts": "Концерттер",
+      "Tech": "Технология",
+      "Student": "Студенттік",
+      "Sports": "Спорт"
+    },
+    "loading": "Іс-шаралар ізделуде…",
+    "resultsAria": "Іздеу нәтижелері",
+    "found": "{count, plural, other {# іс-шара табылды}}",
+    "emptyTitle": "Іс-шаралар табылмады",
+    "emptyBody": "Басқа сұрау немесе санат таңдап көріңіз.",
+    "clearFilters": "Сүзгілерді тазалау"
+  },
+  "EventLoading": {
+    "label": "Іс-шара жүктелуде…"
+  },
+  "EventDetails": {
+    "unavailable": "Іс-шара қолжетімсіз.",
+    "allEvents": "← Барлық іс-шаралар",
+    "cancelled": "Іс-шара тоқтатылды",
+    "about": "Іс-шара туралы",
+    "host": "Ұйымдастырушы",
+    "organizerFallback": "Іс-шара ұйымдастырушысы",
+    "hostQuestion": "Іс-шара туралы сұрағыңыз бар ма? Ұйымдастырушыға жазыңыз.",
+    "contactOrganizer": "Ұйымдастырушының қолдау қызметіне жазу",
+    "whereToMeet": "Өтетін орны",
+    "viewMap": "Картадан көру ↗",
+    "refundPolicy": "Қайтару шарттары",
+    "addToCalendar": "Күнтізбеге қосу",
+    "chooseTickets": "Билеттерді таңдаңыз",
+    "free": "Тегін",
+    "paid": "Ақылы",
+    "quantityFor": "Саны: {name}",
+    "removeTicket": "«{name}» билетін азайту",
+    "addTicket": "«{name}» билетін қосу",
+    "availability": "Қолжетімді: {remaining} · Бір тапсырысқа ең көбі {max}",
+    "ticketsUnavailable": "Билеттер әзірге қолжетімсіз.",
+    "promoLabel": "Промокод",
+    "promoPlaceholder": "Кодты енгізіңіз",
+    "applyPromo": "Промокодты қолдану",
+    "campaignCode": "Науқан коды: {code}. Ол таңдалған билеттер бойынша тексеріледі.",
+    "signInToValidate": "Жеңілдікті тексеру үшін кіріңіз.",
+    "promoApplied": "✓ <strong>{code}</strong> коды қолданылды: үнемдеуіңіз — {amount}.",
+    "promoAppliedCampaign": "✓ <strong>{code}</strong> коды қолданылды ({campaign}): үнемдеуіңіз — {amount}.",
+    "tickets": "Билеттер",
+    "subtotal": "Билеттер құны",
+    "discount": "Жеңілдік",
+    "discountWithCode": "Жеңілдік ({code})",
+    "processingFee": "Қызмет ақысы",
+    "total": "Барлығы",
+    "estimatedSubtotal": "Алдын ала құны",
+    "finalFeesNote": "Соңғы ақылар мен жеңілдіктер тапсырысты растау алдында көрсетіледі.",
+    "availabilityChanged": "Билеттердің қолжетімділігі өзгерді. Таңдауыңызды жаңартыңыз.",
+    "signInToCheckout": "Тапсырысты рәсімдеу үшін кіріңіз",
+    "proceed": "Тапсырысты рәсімдеу"
+  },
+  "CampaignRedirect": {
+    "notAvailable": "Бұл науқан қолжетімсіз.",
+    "viewWithout": "Іс-шараны науқансыз ашу",
+    "opening": "Ұсыныс ашылуда…"
+  }
+}

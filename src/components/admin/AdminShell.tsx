@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   createContext,
   useContext,
@@ -26,13 +27,13 @@ interface AdminContextState {
 }
 const AdminContext = createContext<AdminContextState | null>(null);
 const navigation = [
-  ["/admin/dashboard", "Overview"],
-  ["/admin/organizers", "Organizer reviews"],
-  ["/admin/paid-events", "Paid event reviews"],
-  ["/admin/events", "Event moderation"],
-  ["/admin/users", "User management"],
-  ["/admin/campaigns", "Promo activity"],
-];
+  ["/admin/dashboard", "overview"],
+  ["/admin/organizers", "organizers"],
+  ["/admin/paid-events", "paidEvents"],
+  ["/admin/events", "events"],
+  ["/admin/users", "users"],
+  ["/admin/campaigns", "campaigns"],
+] as const;
 export function AdminShell({
   children,
   initialUser,
@@ -40,6 +41,7 @@ export function AdminShell({
   children: ReactNode;
   initialUser: User;
 }) {
+  const t = useTranslations("admin.AdminShell");
   const path = usePathname();
   const query = useSearchParams();
   const router = useRouter();
@@ -55,13 +57,13 @@ export function AdminShell({
     return (
       <main className="mx-auto max-w-3xl px-md py-xl">
         <Card className="space-y-md">
-          <h1 className="text-title">Admin access required</h1>
-          <p>Sign in with an active platform administrator account.</p>
+          <h1 className="text-title">{t("accessRequired")}</h1>
+          <p>{t("accessRequiredBody")}</p>
           <Link
             href={`/login?next=${encodeURIComponent(current)}`}
             className="underline"
           >
-            Sign in
+            {t("signIn")}
           </Link>
         </Card>
       </main>
@@ -81,14 +83,14 @@ export function AdminShell({
         <aside className="space-y-lg lg:sticky lg:top-lg">
           <div className="px-sm">
             <p className="text-label font-medium uppercase tracking-widest text-primary">
-              Platform admin
+              {t("platformAdmin")}
             </p>
             <p className="mt-sm text-label text-text-secondary">
-              Review. Moderate. Keep trust.
+              {t("tagline")}
             </p>
           </div>
           <nav
-            aria-label="Admin navigation"
+            aria-label={t("navLabel")}
             className="flex flex-wrap gap-sm lg:flex-col"
           >
             {navigation.map(([target, label]) => (
@@ -101,14 +103,14 @@ export function AdminShell({
                   path === target && "bg-primary text-white hover:bg-primary",
                 )}
               >
-                {label}
+                {t(`nav.${label}`)}
               </Link>
             ))}
           </nav>
           <Card className="space-y-md">
-            <Badge>Admin</Badge>
+            <Badge>{t("adminBadge")}</Badge>
             <p className="break-words text-label font-medium">
-              {user?.full_name ?? initialUser.full_name ?? "Administrator"}
+              {user?.full_name ?? initialUser.full_name ?? t("administrator")}
             </p>
             <Button
               variant="text"
@@ -126,14 +128,14 @@ export function AdminShell({
                 }
               }}
             >
-              Sign out
+              {t("signOut")}
             </Button>
             {!!error && <ErrorState error={error} />}
           </Card>
         </aside>
         <main className="min-w-0 space-y-xl">
           <section
-            aria-label="Admin data source"
+            aria-label={t("dataSourceLabel")}
             className={cn(
               "flex flex-wrap items-center justify-between gap-md rounded-card border p-md",
               mode === "demo"
@@ -143,12 +145,10 @@ export function AdminShell({
           >
             <div className="min-w-0 space-y-sm">
               <Badge variant={mode === "demo" ? "neutral" : "success"}>
-                {mode === "demo" ? "Demo mode — sample data" : "Live data"}
+                {mode === "demo" ? t("demoBadge") : t("liveBadge")}
               </Badge>
               <p className="max-w-3xl text-label text-text-secondary">
-                {mode === "demo"
-                  ? "Biweekly report preview. Actions update sample records in this tab and reset on reload. Your real platform records are unaffected."
-                  : "Actions affect platform records. Missing review APIs show an unavailable state; choose Demo data for the complete report preview."}
+                {mode === "demo" ? t("demoHelp") : t("liveHelp")}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-md">
@@ -161,14 +161,14 @@ export function AdminShell({
                     setRevision((value) => value + 1);
                   }}
                 >
-                  Reset demo data
+                  {t("resetDemo")}
                 </Button>
               )}
               <Link
                 href={adminHref(current, mode === "demo" ? "live" : "demo")}
                 className="inline-flex min-h-button items-center rounded-button border border-text-primary bg-surface px-md py-3 text-label font-medium"
               >
-                {mode === "demo" ? "Use live data" : "Use demo data"}
+                {mode === "demo" ? t("useLive") : t("useDemo")}
               </Link>
             </div>
           </section>
@@ -193,13 +193,14 @@ export function useAdminRequestKey() {
   };
 }
 export function AdminAccessProblem({ message }: { message: string }) {
+  const t = useTranslations("admin.AdminShell");
   const router = useRouter();
   return (
     <main className="mx-auto max-w-3xl px-md py-xl">
       <Card className="space-y-lg">
-        <h1 className="text-title">Admin access unavailable</h1>
+        <h1 className="text-title">{t("accessUnavailable")}</h1>
         <p>{message}</p>
-        <Button onClick={() => router.refresh()}>Retry access check</Button>
+        <Button onClick={() => router.refresh()}>{t("retryAccess")}</Button>
       </Card>
     </main>
   );

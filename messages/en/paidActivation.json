@@ -1,0 +1,64 @@
+{
+  "loading": "Checking paid-sales requirements…",
+  "ariaLabel": "Paid sales activation",
+  "heading": "Paid sales activation checklist",
+  "active": "Active",
+  "activeNote": "Paid sales are activated for this event. Checkout and payout records remain simulated; no real money is charged.",
+  "suspendedHeading": "Paid sales suspended",
+  "suspendedNote": "Contact platform support to review this suspension. Further activation payments are unavailable here.",
+  "status": {
+    "awaitingReview": "awaiting admin review",
+    "changesRequired": "changes required",
+    "not_ready": "not ready",
+    "ready": "ready",
+    "pending_review": "pending review",
+    "rejected": "rejected",
+    "active": "active",
+    "suspended": "suspended"
+  },
+  "intro": "Sandbox verification, payout connection, and activation fees apply to this event. No real identity documents, bank details, or payments are required. A platform administrator approves each paid event before it can be published.",
+  "review": {
+    "submitted": "Submitted for review. A platform administrator must approve this paid event; you can publish it once it is approved.",
+    "checkStatus": "Check approval status",
+    "changesRequired": "Event details changed after submission. Submit the updated event for review.",
+    "rejected": "The administrator rejected this paid event. Address the reason and submit again."
+  },
+  "checklist": {
+    "hasPaidTicket": "Paid ticket configured",
+    "identityVerified": "Sandbox identity verified",
+    "payoutConnected": "Sandbox payout connected",
+    "activationFeePaid": "Activation fee recorded",
+    "termsAccepted": "Terms accepted",
+    "item": "{label}: {state}",
+    "complete": "Complete",
+    "pending": "Pending"
+  },
+  "identity": {
+    "heading": "1. Verify sandbox identity",
+    "contact": "Organizer contact name",
+    "organization": "Organization name (optional)",
+    "phone": "Contact phone (optional)",
+    "submit": "Verify sandbox identity"
+  },
+  "payout": {
+    "heading": "2. Connect sandbox payout",
+    "reference": "Sandbox payout reference",
+    "helper": "Use a demonstration reference only.",
+    "submit": "Connect sandbox payout",
+    "invalid": "Use a sandbox reference such as DEMO-0001."
+  },
+  "terms": {
+    "text": "I accept the sandbox paid-event terms: this demonstration charges no real money and produces no real payouts. I am responsible for event information and the stated refund policy.",
+    "accept": "Accept paid-event terms"
+  },
+  "fee": {
+    "pay": "Pay simulated activation fee",
+    "failed": "Activation fee payment was not successful.",
+    "receipt": "Simulated activation fee recorded: {amount}. No real money charged."
+  },
+  "submit": {
+    "submit": "Submit paid event for admin review",
+    "waiting": "Waiting for admin approval",
+    "failed": "The paid event could not be submitted for review."
+  }
+}

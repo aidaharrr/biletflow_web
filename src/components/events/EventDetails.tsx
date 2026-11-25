@@ -19,6 +19,8 @@ import { formatKZT } from "@/lib/money";
 import { downloadCalendar } from "@/lib/calendar";
 import { useApiData } from "@/hooks/useApiData";
 import type { CheckoutItem } from "@/types/api";
+import { useTranslations } from "next-intl";
+import { useIntlLocale, useLabel } from "@/i18n/labels";
 
 export function EventDetails({
   id,
@@ -29,6 +31,10 @@ export function EventDetails({
   initialPromoCode?: string;
   initialItems?: CheckoutItem[];
 }) {
+  const t = useTranslations("events");
+  const label = useLabel();
+  const locale = useIntlLocale();
+  const money = (amount: number) => formatKZT(amount);
   const { user, loading: authLoading } = useAuth();
   const [quantities, setQuantities] = useState<Record<string, number>>(() =>
     Object.fromEntries(
@@ -81,12 +87,13 @@ export function EventDetails({
         item.quantity,
     0,
   );
-  if (resource.loading) return <LoadingSpinner label="Loading event…" />;
+  if (resource.loading)
+    return <LoadingSpinner label={t("EventLoading.label")} />;
   if (resource.error || !event)
     return (
       <main className="mx-auto max-w-4xl px-md py-xl">
         <ErrorState
-          error={resource.error ?? new Error("Event unavailable.")}
+          error={resource.error ?? new Error(t("EventDetails.unavailable"))}
           retry={resource.retry}
         />
       </main>
@@ -110,7 +117,7 @@ export function EventDetails({
         href="/events"
         className="text-label text-text-secondary hover:text-primary"
       >
-        ← All events
+        {t("EventDetails.allEvents")}
       </Link>
       <EventBanner
         event={event}
@@ -120,41 +127,41 @@ export function EventDetails({
       <div className="grid items-start gap-xl lg:grid-cols-[minmax(0,1fr)_400px]">
         <div className="space-y-xl">
           <header className="space-y-md">
-            <Badge className="capitalize">{event.category}</Badge>
+            <Badge className="capitalize">{label(event.category)}</Badge>
             <h1 className="font-brand text-3xl font-semibold sm:text-4xl">
               {event.title}
             </h1>
             <p className="text-text-secondary">
-              <time dateTime={event.starts_at}>{eventDate(event)}</time> ·{" "}
-              {event.time_zone}
+              <time dateTime={event.starts_at}>{eventDate(event, locale)}</time>{" "}
+              · {event.time_zone}
             </p>
             <p className="text-text-secondary">
               {event.venue.name} · {event.venue.city}
             </p>
             {event.status === "cancelled" && (
-              <Badge variant="error">Event cancelled</Badge>
+              <Badge variant="error">{t("EventDetails.cancelled")}</Badge>
             )}
           </header>
           <section className="space-y-md">
-            <h2 className="text-title">About this event</h2>
+            <h2 className="text-title">{t("EventDetails.about")}</h2>
             <p className="whitespace-pre-wrap leading-relaxed text-text-secondary">
               {event.description}
             </p>
           </section>
           <Card className="space-y-sm">
-            <h2 className="text-title">Your host</h2>
-            <p>{event.organizer_name || "Event organizer"}</p>
+            <h2 className="text-title">{t("EventDetails.host")}</h2>
+            <p>{event.organizer_name || t("EventDetails.organizerFallback")}</p>
             <p className="text-label text-text-secondary">
-              Questions about this event? Message the organizer.
+              {t("EventDetails.hostQuestion")}
             </p>
             <RequestSupport
               eventId={event.id}
               eventTitle={event.title}
-              label="Contact organizer support"
+              label={t("EventDetails.contactOrganizer")}
             />
           </Card>
           <section className="space-y-md">
-            <h2 className="text-title">Where to meet</h2>
+            <h2 className="text-title">{t("EventDetails.whereToMeet")}</h2>
             <p>{event.venue.name}</p>
             <p className="text-text-secondary">{event.venue.address}</p>
             <a
@@ -163,11 +170,11 @@ export function EventDetails({
               rel="noreferrer"
               className="inline-block text-label font-medium underline"
             >
-              View location on map ↗
+              {t("EventDetails.viewMap")}
             </a>
           </section>
           <section className="space-y-md">
-            <h2 className="text-title">Refund policy</h2>
+            <h2 className="text-title">{t("EventDetails.refundPolicy")}</h2>
             <p className="whitespace-pre-wrap text-label text-text-secondary">
               {event.refund_policy}
             </p>
@@ -181,13 +188,13 @@ export function EventDetails({
                 }
               }}
             >
-              Add to Calendar
+              {t("EventDetails.addToCalendar")}
             </Button>
             {!!calendarError && <ErrorState error={calendarError} />}
           </section>
         </div>
         <Card className="space-y-lg lg:sticky lg:top-lg">
-          <h2 className="text-title">Choose your tickets</h2>
+          <h2 className="text-title">{t("EventDetails.chooseTickets")}</h2>
           {event.available_ticket_types.length ? (
             event.available_ticket_types.map((type) => {
               const availability = ticketAvailability(type, event);
@@ -204,22 +211,30 @@ export function EventDetails({
                         {type.description}
                       </p>
                     </div>
-                    <Badge>{type.kind === "free" ? "Free" : "Paid"}</Badge>
+                    <Badge>
+                      {type.kind === "free"
+                        ? t("EventDetails.free")
+                        : t("EventDetails.paid")}
+                    </Badge>
                   </div>
                   <div className="flex items-center justify-between gap-md">
                     <p className="font-medium">
                       {type.kind === "free"
-                        ? "Free"
-                        : formatKZT(type.price_minor)}
+                        ? t("EventDetails.free")
+                        : money(type.price_minor)}
                     </p>
                     <div
                       role="group"
-                      aria-label={`Quantity for ${type.name}`}
+                      aria-label={t("EventDetails.quantityFor", {
+                        name: type.name,
+                      })}
                       className="flex items-center gap-md"
                     >
                       <button
                         type="button"
-                        aria-label={`Remove ${type.name} ticket`}
+                        aria-label={t("EventDetails.removeTicket", {
+                          name: type.name,
+                        })}
                         disabled={!quantity || checkout}
                         onClick={() =>
                           setQuantities((value) => ({
@@ -239,7 +254,9 @@ export function EventDetails({
                       </output>
                       <button
                         type="button"
-                        aria-label={`Add ${type.name} ticket`}
+                        aria-label={t("EventDetails.addTicket", {
+                          name: type.name,
+                        })}
                         disabled={quantity >= availability.limit || checkout}
                         onClick={() =>
                           setQuantities((value) => ({
@@ -254,15 +271,19 @@ export function EventDetails({
                     </div>
                   </div>
                   <p className="text-label text-text-secondary">
-                    {availability.reason ??
-                      `${availability.remaining} available · Max ${type.max_per_order} per order`}
+                    {availability.reason
+                      ? label(availability.reason)
+                      : t("EventDetails.availability", {
+                          remaining: availability.remaining,
+                          max: type.max_per_order,
+                        })}
                   </p>
                 </div>
               );
             })
           ) : (
             <p className="text-text-secondary">
-              Tickets are not available yet.
+              {t("EventDetails.ticketsUnavailable")}
             </p>
           )}
           <form
@@ -274,10 +295,10 @@ export function EventDetails({
             }}
           >
             <Input
-              label="Promo code"
+              label={t("EventDetails.promoLabel")}
               value={promoDraft}
               onChange={(change) => setPromoDraft(change.target.value)}
-              placeholder="Enter your code"
+              placeholder={t("EventDetails.promoPlaceholder")}
               disabled={checkout}
             />
             <Button
@@ -287,17 +308,16 @@ export function EventDetails({
               disabled={!items.length || !user || checkout}
               loading={!!items.length && !!user && quote.loading}
             >
-              Apply promo code
+              {t("EventDetails.applyPromo")}
             </Button>
             {initialPromoCode && (
               <p className="text-label text-text-secondary">
-                Campaign code: {initialPromoCode}. It will be checked against
-                your selection.
+                {t("EventDetails.campaignCode", { code: initialPromoCode })}
               </p>
             )}
             {!user && promoDraft && (
               <p className="text-label text-text-secondary">
-                Sign in to validate your discount.
+                {t("EventDetails.signInToValidate")}
               </p>
             )}
           </form>
@@ -309,49 +329,63 @@ export function EventDetails({
               role="status"
               className="rounded-input border border-success/30 bg-success/10 p-md text-label"
             >
-              ✓ Code <strong>{quote.data.promo_code}</strong> applied
-              {quote.data.campaign_name ? ` (${quote.data.campaign_name})` : ""}
-              : you save {formatKZT(quote.data.discount_minor)}.
+              {t.rich(
+                quote.data.campaign_name
+                  ? "EventDetails.promoAppliedCampaign"
+                  : "EventDetails.promoApplied",
+                {
+                  code: quote.data.promo_code,
+                  campaign: quote.data.campaign_name ?? "",
+                  amount: money(quote.data.discount_minor),
+                  strong: (chunks) => <strong>{chunks}</strong>,
+                },
+              )}
             </p>
           )}
           <dl className="space-y-sm text-label">
             <div className="flex justify-between">
-              <dt>Tickets</dt>
+              <dt>{t("EventDetails.tickets")}</dt>
               <dd>{items.reduce((sum, item) => sum + item.quantity, 0)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt>Subtotal</dt>
-              <dd>{formatKZT(quote.data?.subtotal_minor ?? subtotal)}</dd>
+              <dt>{t("EventDetails.subtotal")}</dt>
+              <dd>{money(quote.data?.subtotal_minor ?? subtotal)}</dd>
             </div>
             {quote.data && (
               <>
                 <div className="flex justify-between">
                   <dt>
-                    Discount
-                    {quote.data.promo_code ? ` (${quote.data.promo_code})` : ""}
+                    {quote.data.promo_code
+                      ? t("EventDetails.discountWithCode", {
+                          code: quote.data.promo_code,
+                        })
+                      : t("EventDetails.discount")}
                   </dt>
-                  <dd>−{formatKZT(quote.data.discount_minor)}</dd>
+                  <dd>−{money(quote.data.discount_minor)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt>Processing fee</dt>
-                  <dd>{formatKZT(quote.data.processing_fee_minor)}</dd>
+                  <dt>{t("EventDetails.processingFee")}</dt>
+                  <dd>{money(quote.data.processing_fee_minor)}</dd>
                 </div>
               </>
             )}
             <div className="flex justify-between border-t border-divider pt-md text-lg font-semibold">
-              <dt>{quote.data ? "Total" : "Estimated subtotal"}</dt>
-              <dd>{formatKZT(quote.data?.total_minor ?? subtotal)}</dd>
+              <dt>
+                {quote.data
+                  ? t("EventDetails.total")
+                  : t("EventDetails.estimatedSubtotal")}
+              </dt>
+              <dd>{money(quote.data?.total_minor ?? subtotal)}</dd>
             </div>
           </dl>
           {!quote.data && (
             <p className="text-label text-text-secondary">
-              Final fees and discounts are confirmed before you complete
-              checkout.
+              {t("EventDetails.finalFeesNote")}
             </p>
           )}
           {invalidSelection && (
             <p role="alert" className="text-label text-error">
-              Availability has changed. Please update your selection.
+              {t("EventDetails.availabilityChanged")}
             </p>
           )}
           {!authLoading && !user && items.length > 0 ? (
@@ -359,7 +393,7 @@ export function EventDetails({
               className="block rounded-button bg-primary px-5 py-3.5 text-center font-medium text-white"
               href={`/login?next=${encodeURIComponent(next)}`}
             >
-              Sign in to checkout
+              {t("EventDetails.signInToCheckout")}
             </Link>
           ) : (
             <Button
@@ -373,7 +407,7 @@ export function EventDetails({
               }
               onClick={() => setCheckout(true)}
             >
-              Proceed to Checkout
+              {t("EventDetails.proceed")}
             </Button>
           )}
         </Card>

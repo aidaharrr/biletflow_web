@@ -1,0 +1,72 @@
+{
+  "EventsPage": {
+    "eyebrow": "Make plans. Make memories.",
+    "title": "Find your next experience.",
+    "subtitle": "Discover events, meet your community, and be there for what matters.",
+    "filterAria": "Filter events",
+    "searchLabel": "Search events",
+    "searchPlaceholder": "Search by event or venue",
+    "categoriesAria": "Event categories",
+    "categories": {
+      "All": "All",
+      "Concerts": "Concerts",
+      "Tech": "Tech",
+      "Student": "Student",
+      "Sports": "Sports"
+    },
+    "loading": "Finding events…",
+    "resultsAria": "Event results",
+    "found": "{count, plural, one {# event found} other {# events found}}",
+    "emptyTitle": "No events found",
+    "emptyBody": "Try another search or category.",
+    "clearFilters": "Clear filters"
+  },
+  "EventLoading": {
+    "label": "Loading event…"
+  },
+  "EventDetails": {
+    "unavailable": "Event unavailable.",
+    "allEvents": "← All events",
+    "cancelled": "Event cancelled",
+    "about": "About this event",
+    "host": "Your host",
+    "organizerFallback": "Event organizer",
+    "hostQuestion": "Questions about this event? Message the organizer.",
+    "contactOrganizer": "Contact organizer support",
+    "whereToMeet": "Where to meet",
+    "viewMap": "View location on map ↗",
+    "refundPolicy": "Refund policy",
+    "addToCalendar": "Add to Calendar",
+    "chooseTickets": "Choose your tickets",
+    "free": "Free",
+    "paid": "Paid",
+    "quantityFor": "Quantity for {name}",
+    "removeTicket": "Remove {name} ticket",
+    "addTicket": "Add {name} ticket",
+    "availability": "{remaining} available · Max {max} per order",
+    "ticketsUnavailable": "Tickets are not available yet.",
+    "promoLabel": "Promo code",
+    "promoPlaceholder": "Enter your code",
+    "applyPromo": "Apply promo code",
+    "campaignCode": "Campaign code: {code}. It will be checked against your selection.",
+    "signInToValidate": "Sign in to validate your discount.",
+    "promoApplied": "✓ Code <strong>{code}</strong> applied: you save {amount}.",
+    "promoAppliedCampaign": "✓ Code <strong>{code}</strong> applied ({campaign}): you save {amount}.",
+    "tickets": "Tickets",
+    "subtotal": "Subtotal",
+    "discount": "Discount",
+    "discountWithCode": "Discount ({code})",
+    "processingFee": "Processing fee",
+    "total": "Total",
+    "estimatedSubtotal": "Estimated subtotal",
+    "finalFeesNote": "Final fees and discounts are confirmed before you complete checkout.",
+    "availabilityChanged": "Availability has changed. Please update your selection.",
+    "signInToCheckout": "Sign in to checkout",
+    "proceed": "Proceed to Checkout"
+  },
+  "CampaignRedirect": {
+    "notAvailable": "This promotion is not available.",
+    "viewWithout": "View event without the promotion",
+    "opening": "Opening your event offer…"
+  }
+}

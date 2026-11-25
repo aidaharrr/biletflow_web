@@ -7,18 +7,20 @@ import { Button, Input, Modal, Select, Textarea } from "@/components/ui";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { createSupportCase } from "@/lib/api";
 import type { SupportCase, SupportCategory } from "@/types/api";
+import { useTranslations } from "next-intl";
 
-const CATEGORY_LABELS: Partial<Record<SupportCategory, string>> = {
-  ticket_delivery: "I didn't receive my ticket",
-  payment: "Payment or charge",
-  refund: "Refund request",
-  seating: "Seating",
-  event_information: "Question about the event",
-  check_in: "Check-in or QR code problem",
-  account: "My account",
-  technical: "Technical problem",
-  report_event: "Report this event to BiletFlow",
-};
+/** Categories an attendee can pick; labels are in support.RequestSupport.categories. */
+const CATEGORIES: SupportCategory[] = [
+  "ticket_delivery",
+  "payment",
+  "refund",
+  "seating",
+  "event_information",
+  "check_in",
+  "account",
+  "technical",
+  "report_event",
+];
 
 /** Attendee entry point for a support case tied to an event, order, or ticket.
  * Cases about an event go to its organizer; event reports go to platform admins.
@@ -28,7 +30,7 @@ export function RequestSupport({
   eventTitle,
   orderId,
   ticketId,
-  label = "Request support",
+  label,
   variant = "outlined",
   className,
 }: {
@@ -40,6 +42,7 @@ export function RequestSupport({
   variant?: "outlined" | "text" | "primary";
   className?: string;
 }) {
+  const t = useTranslations("support");
   const { user, loading } = useAuth();
   const path = usePathname();
   const [open, setOpen] = useState(false);
@@ -51,7 +54,7 @@ export function RequestSupport({
         href={`/login?next=${encodeURIComponent(path)}`}
         className="inline-block text-label font-medium underline"
       >
-        Sign in to request support
+        {t("RequestSupport.signInToRequest")}
       </Link>
     );
   return (
@@ -61,13 +64,13 @@ export function RequestSupport({
         className={className}
         onClick={() => setOpen(true)}
       >
-        {label}
+        {label ?? t("RequestSupport.button")}
       </Button>
       {created && !open && (
         <p role="status" className="text-label text-success">
-          Support request {created.number ?? ""} sent.{" "}
+          {t("RequestSupport.sent", { number: created.number ?? "" })}{" "}
           <Link href={`/support?case=${created.id}`} className="underline">
-            Follow the conversation
+            {t("RequestSupport.follow")}
           </Link>
         </p>
       )}
@@ -103,8 +106,9 @@ function SupportForm({
   onClose: () => void;
   onCreated: (item: SupportCase) => void;
 }) {
+  const t = useTranslations("support");
   // Refunds need an order; event reports must not carry order or ticket context.
-  const categories = (Object.keys(CATEGORY_LABELS) as SupportCategory[]).filter(
+  const categories = CATEGORIES.filter(
     (category) =>
       (category !== "refund" || !!orderId) &&
       (category !== "report_event" || (!orderId && !ticketId)),
@@ -129,7 +133,7 @@ function SupportForm({
       ...(ticketId ? { ticket_id: ticketId } : {}),
     };
     if (body.subject.length < 3 || !body.message) {
-      setError(new Error("Add a short subject and describe the issue."));
+      setError(new Error(t("RequestSupport.invalid")));
       return;
     }
     const signature = JSON.stringify(body);
@@ -146,25 +150,31 @@ function SupportForm({
   }
 
   return (
-    <Modal title="Request support" busy={busy} onClose={onClose}>
+    <Modal title={t("RequestSupport.modalTitle")} busy={busy} onClose={onClose}>
       <p className="break-words text-label text-text-secondary">
         {[
-          eventTitle ? `Event: ${eventTitle}` : null,
-          orderId ? `Order ${orderId.slice(0, 8)}` : null,
-          ticketId ? `Ticket ${ticketId.slice(0, 8)}` : null,
+          eventTitle
+            ? t("RequestSupport.contextEvent", { title: eventTitle })
+            : null,
+          orderId
+            ? t("RequestSupport.contextOrder", { id: orderId.slice(0, 8) })
+            : null,
+          ticketId
+            ? t("RequestSupport.contextTicket", { id: ticketId.slice(0, 8) })
+            : null,
         ]
           .filter(Boolean)
           .join(" · ")}
       </p>
       <p className="text-label text-text-secondary">
         {category === "report_event"
-          ? "Reports go to BiletFlow platform administrators, not the organizer."
-          : "Your request goes to the event organizer's support team. You'll see their replies under Support."}
+          ? t("RequestSupport.reportNote")
+          : t("RequestSupport.organizerNote")}
       </p>
       {!!error && <ErrorState error={error} />}
       <form onSubmit={submit} className="space-y-md">
         <Select
-          label="What do you need help with?"
+          label={t("RequestSupport.categoryLabel")}
           value={category}
           onChange={(event) =>
             setCategory(event.target.value as SupportCategory)
@@ -173,12 +183,12 @@ function SupportForm({
         >
           {categories.map((value) => (
             <option key={value} value={value}>
-              {CATEGORY_LABELS[value]}
+              {t(`RequestSupport.categories.${value}`)}
             </option>
           ))}
         </Select>
         <Input
-          label="Subject"
+          label={t("RequestSupport.subject")}
           name="subject"
           required
           minLength={3}
@@ -186,14 +196,14 @@ function SupportForm({
           disabled={busy}
         />
         <Textarea
-          label="Describe the issue"
+          label={t("RequestSupport.message")}
           name="message"
           required
           maxLength={10000}
           disabled={busy}
         />
         <Button type="submit" loading={busy} className="w-full">
-          Send support request
+          {t("RequestSupport.submit")}
         </Button>
       </form>
     </Modal>

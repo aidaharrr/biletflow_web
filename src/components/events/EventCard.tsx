@@ -1,10 +1,14 @@
+"use client";
 import Link from "next/link";
+import { useIntlLocale, useLabel } from "@/i18n/labels";
 import { Card, Badge } from "@/components/ui";
 import { EventBanner } from "./EventBanner";
 import { eventDate, priceRange } from "@/lib/events";
 import type { Event } from "@/types/api";
 
 export function EventCard({ event }: { event: Event }) {
+  const label = useLabel();
+  const locale = useIntlLocale();
   return (
     <Card className="overflow-hidden p-0 transition-shadow hover:shadow-lg">
       <Link
@@ -13,17 +17,17 @@ export function EventCard({ event }: { event: Event }) {
       >
         <EventBanner event={event} className="aspect-[16/9]" />
         <div className="space-y-md p-lg">
-          <Badge className="capitalize">{event.category}</Badge>
+          <Badge className="capitalize">{label(event.category)}</Badge>
           <h2 className="text-title">{event.title}</h2>
           <p className="text-label text-text-secondary">
-            <time dateTime={event.starts_at}>{eventDate(event)}</time>
+            <time dateTime={event.starts_at}>{eventDate(event, locale)}</time>
           </p>
           <p className="text-label text-text-secondary">
             {event.venue.name}
             {event.venue.city ? ` · ${event.venue.city}` : ""}
           </p>
           <p className="border-t border-divider pt-md font-medium">
-            {priceRange(event.available_ticket_types)}
+            {label(priceRange(event.available_ticket_types))}
           </p>
         </div>
       </Link>

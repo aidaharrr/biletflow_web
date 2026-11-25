@@ -7,6 +7,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Badge, Button, Card, Input, Textarea } from "@/components/ui";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -17,17 +18,15 @@ import {
   submitOrganizerApplication,
 } from "@/lib/api";
 import { dateLabel } from "@/lib/organizer";
+import { useIntlLocale } from "@/i18n/labels";
 import type { OrganizerApplicationRecord } from "@/types/api";
 
-const STEPS = [
-  "Submit your organizer details below.",
-  "A platform administrator reviews the application.",
-  "Once approved, the Organizer portal appears in the menu and you can create events.",
-  "Free events can be published straight away. Paid events also need a sandbox paid-sales checklist and a separate admin review.",
-];
+const STEPS = ["submit", "review", "approved", "publish"] as const;
 
 export default function BecomeOrganizerPage() {
   const { user, loading: authLoading, refresh } = useAuth();
+  const t = useTranslations("becomeOrganizer");
+  const locale = useIntlLocale();
   const isOrganizer =
     !!user &&
     (user.roles.includes("organizer") || user.roles.includes("platform_admin"));
@@ -80,24 +79,24 @@ export default function BecomeOrganizerPage() {
     }
   }
 
-  if (authLoading) return <LoadingSpinner label="Checking your account…" />;
+  if (authLoading) return <LoadingSpinner label={t("checkingAccount")} />;
   if (!user)
     return (
       <Shell>
         <Card className="space-y-lg">
-          <p>Sign in or create an account to apply as an organizer.</p>
+          <p>{t("signedOut.prompt")}</p>
           <div className="flex flex-wrap gap-md">
             <Link
               href="/login?next=%2Fbecome-organizer"
               className="inline-block rounded-button bg-primary px-5 py-3.5 font-medium text-white"
             >
-              Sign in
+              {t("signedOut.signIn")}
             </Link>
             <Link
               href="/register"
               className="inline-block rounded-button border border-text-primary px-5 py-3.5 font-medium"
             >
-              Create account
+              {t("signedOut.createAccount")}
             </Link>
           </div>
         </Card>
@@ -107,19 +106,19 @@ export default function BecomeOrganizerPage() {
     return (
       <Shell>
         <Card className="space-y-lg">
-          <Badge variant="success">Organizer access active</Badge>
-          <p>Your account can already create and manage events.</p>
+          <Badge variant="success">{t("organizer.badge")}</Badge>
+          <p>{t("organizer.body")}</p>
           <Link
             href="/organizer/dashboard"
             className="inline-block rounded-button bg-primary px-5 py-3.5 font-medium text-white"
           >
-            Open organizer portal
+            {t("organizer.openPortal")}
           </Link>
         </Card>
       </Shell>
     );
   if (resource.loading)
-    return <LoadingSpinner label="Loading your organizer application…" />;
+    return <LoadingSpinner label={t("loadingApplication")} />;
   if (resource.error)
     return (
       <Shell>
@@ -133,7 +132,7 @@ export default function BecomeOrganizerPage() {
       {application && (
         <Card className="space-y-md" aria-live="polite">
           <div className="flex flex-wrap items-center justify-between gap-md">
-            <h2 className="text-title">Your application</h2>
+            <h2 className="text-title">{t("application.title")}</h2>
             <Badge
               variant={
                 application.status === "approved"
@@ -144,38 +143,34 @@ export default function BecomeOrganizerPage() {
               }
             >
               {application.status === "pending"
-                ? "Pending review"
+                ? t("application.statusPending")
                 : application.status === "approved"
-                  ? "Approved"
-                  : "Rejected"}
+                  ? t("application.statusApproved")
+                  : t("application.statusRejected")}
             </Badge>
           </div>
           <p className="text-label text-text-secondary">
-            {application.organization_name} · submitted{" "}
-            {dateLabel(application.created_at)}
+            {t("application.submitted", {
+              organization: application.organization_name,
+              date: dateLabel(application.created_at, locale),
+            })}
           </p>
           {application.status === "pending" && (
-            <p className="text-label">
-              A platform administrator is reviewing your application. You will
-              get a notification when it is decided.
-            </p>
+            <p className="text-label">{t("application.pendingBody")}</p>
           )}
           {application.status === "approved" && (
-            <p className="text-label">
-              Approved. Refresh your access to open the organizer portal.
-            </p>
+            <p className="text-label">{t("application.approvedBody")}</p>
           )}
           {application.status === "rejected" && (
             <p role="alert" className="text-label text-error">
-              Your application was rejected. Check your notifications for the
-              administrator&apos;s reason, update your details and apply again.
+              {t("application.rejectedBody")}
             </p>
           )}
           {application.status !== "rejected" && (
             <Button variant="outlined" loading={checking} onClick={checkStatus}>
               {application.status === "approved"
-                ? "Refresh my access"
-                : "Check status"}
+                ? t("application.refreshAccess")
+                : t("application.checkStatus")}
             </Button>
           )}
         </Card>
@@ -184,10 +179,10 @@ export default function BecomeOrganizerPage() {
         <Card>
           <form onSubmit={submit} className="space-y-md">
             <h2 className="text-title">
-              {application ? "Apply again" : "Organizer details"}
+              {application ? t("form.applyAgain") : t("form.title")}
             </h2>
             <Input
-              label="Contact name"
+              label={t("form.contactName")}
               name="contact_name"
               defaultValue={application?.contact_name ?? user.full_name ?? ""}
               required
@@ -196,7 +191,7 @@ export default function BecomeOrganizerPage() {
               disabled={busy}
             />
             <Input
-              label="Organization name"
+              label={t("form.organizationName")}
               name="organization_name"
               defaultValue={application?.organization_name ?? ""}
               required
@@ -205,7 +200,7 @@ export default function BecomeOrganizerPage() {
               disabled={busy}
             />
             <Input
-              label="Contact phone"
+              label={t("form.contactPhone")}
               name="contact_phone"
               type="tel"
               defaultValue={application?.contact_phone ?? user.phone ?? ""}
@@ -216,7 +211,7 @@ export default function BecomeOrganizerPage() {
               disabled={busy}
             />
             <Textarea
-              label="What events do you organize?"
+              label={t("form.description")}
               name="description"
               defaultValue={application?.description ?? ""}
               required
@@ -226,7 +221,7 @@ export default function BecomeOrganizerPage() {
             />
             {!!error && <ErrorState error={error} />}
             <Button type="submit" loading={busy} disabled={busy}>
-              Submit application
+              {t("form.submit")}
             </Button>
           </form>
         </Card>
@@ -236,15 +231,14 @@ export default function BecomeOrganizerPage() {
 }
 
 function Shell({ children }: { children: ReactNode }) {
+  const t = useTranslations("becomeOrganizer");
   return (
     <main className="mx-auto max-w-[40rem] space-y-lg px-md py-xl">
       <div className="space-y-sm">
-        <h1 className="font-brand text-2xl font-semibold">
-          Become an organizer
-        </h1>
+        <h1 className="font-brand text-2xl font-semibold">{t("title")}</h1>
         <ol className="list-decimal space-y-xs pl-lg text-label text-text-secondary">
           {STEPS.map((step) => (
-            <li key={step}>{step}</li>
+            <li key={step}>{t(`steps.${step}`)}</li>
           ))}
         </ol>
       </div>

@@ -1,0 +1,16 @@
+{
+  "language": "Тіл",
+  "Navbar": {
+    "mainNavigation": "Негізгі навигация",
+    "home": "BiletFlow басты беті",
+    "events": "Іс-шаралар",
+    "myTickets": "Билеттерім",
+    "organizerPortal": "Ұйымдастырушы кабинеті",
+    "becomeOrganizer": "Ұйымдастырушы болу",
+    "adminPanel": "Әкімші панелі",
+    "checkingSession": "Сеанс тексерілуде…",
+    "myProfile": "Менің профилім",
+    "login": "Кіру",
+    "register": "Тіркелу"
+  }
+}

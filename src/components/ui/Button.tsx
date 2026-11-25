@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, type ButtonHTMLAttributes } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/cn";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -21,7 +22,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     {
       variant = "primary",
       loading = false,
-      loadingLabel = "Loading",
+      loadingLabel,
       disabled,
       className,
       children,
@@ -30,6 +31,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref,
   ) {
+    const t = useTranslations("ui");
     return (
       <button
         {...props}
@@ -50,7 +52,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
               className="size-4 shrink-0 animate-spin rounded-full border-2 border-current border-r-transparent motion-reduce:animate-none"
             />
             <span role="status" className="sr-only">
-              {loadingLabel}
+              {loadingLabel ?? t("Button.loading")}
             </span>
           </>
         )}

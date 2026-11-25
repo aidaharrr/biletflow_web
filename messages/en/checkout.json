@@ -1,0 +1,28 @@
+{
+  "CheckoutModal": {
+    "reviewTitle": "Review your booking",
+    "detailsTitle": "Your attendee details",
+    "closeAria": "Close checkout",
+    "fullName": "Full name",
+    "email": "Email",
+    "emailHelper": "Your tickets will be associated with this attendee.",
+    "promoCode": "Promo code: <strong>{code}</strong>",
+    "demoNote": "Review the final total before confirming. Paid bookings use a demo payment; no real money is charged.",
+    "reserving": "Reserving tickets",
+    "reserve": "Reserve and review",
+    "lineItem": "{quantity} × {name}",
+    "ticketFallback": "Ticket",
+    "subtotal": "Subtotal",
+    "discount": "Discount",
+    "discountWithCode": "Discount ({code})",
+    "processingFee": "Processing fee",
+    "total": "Total",
+    "expiresIn": "Reservation expires in {time}.",
+    "expired": "This reservation has expired. Close checkout and select your tickets again.",
+    "demoPayment": "Demo payment · No card details or real money required.",
+    "confirming": "Confirming your booking",
+    "confirmFree": "Confirm free registration",
+    "confirmPaid": "Confirm demo payment · {amount}",
+    "notCompleted": "Checkout was not completed. Your tickets have not been issued."
+  }
+}

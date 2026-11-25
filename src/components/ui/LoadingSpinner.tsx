@@ -1,4 +1,7 @@
-export function LoadingSpinner({ label = "Loading…" }: { label?: string }) {
+import { useTranslations } from "next-intl";
+
+export function LoadingSpinner({ label }: { label?: string }) {
+  const t = useTranslations("ui");
   return (
     <div
       role="status"
@@ -8,7 +11,7 @@ export function LoadingSpinner({ label = "Loading…" }: { label?: string }) {
         aria-hidden="true"
         className="size-5 animate-spin rounded-full border-2 border-divider border-t-primary motion-reduce:animate-none"
       />
-      {label}
+      {label ?? t("LoadingSpinner.loading")}
     </div>
   );
 }

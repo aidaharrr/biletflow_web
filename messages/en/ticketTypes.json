@@ -1,0 +1,54 @@
+{
+  "heading": "Ticket types",
+  "refresh": "Refresh ticket types",
+  "intro": "Unsold ticket types of a draft event can be edited. Hiding a ticket type stops new sales but keeps issued tickets valid. To change a type that has sales, hide it and add a new one to the draft.",
+  "loading": "Loading ticket types…",
+  "columns": {
+    "type": "Ticket type",
+    "price": "Price",
+    "sold": "Sold / quantity",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "free": "Free",
+  "onHold": "{count} on hold",
+  "hidden": "Hidden",
+  "onSale": "On sale",
+  "edit": "Edit",
+  "editDisabled": "Only unsold ticket types of a draft event can be edited",
+  "restore": "Restore",
+  "hide": "Hide",
+  "empty": "No ticket types yet. Add them from the event draft.",
+  "notices": {
+    "visible": "“{name}” is visible again.",
+    "hidden": "“{name}” is hidden. Issued tickets remain valid.",
+    "updated": "“{name}” was updated."
+  },
+  "hideModal": {
+    "title": "Hide this ticket type?",
+    "body": "“{name}” will no longer be offered at checkout. {count} issued ticket(s) stay valid for admission. You can restore it later if capacity allows.",
+    "confirm": "Hide ticket type"
+  },
+  "editModal": {
+    "title": "Edit ticket type",
+    "name": "Ticket name",
+    "description": "Ticket description",
+    "kind": "Ticket kind",
+    "kindFree": "Free",
+    "kindPaid": "Paid",
+    "price": "Price (KZT)",
+    "quantity": "Quantity",
+    "maximum": "Maximum per order",
+    "salesStart": "Sales start (UTC+05:00)",
+    "salesEnd": "Sales end (UTC+05:00)",
+    "reviewNote": "Changing a paid event's tickets requires a new admin review before it can be published.",
+    "save": "Save ticket type"
+  },
+  "errors": {
+    "quantity": "Quantity must be a positive whole number.",
+    "maximum": "The per-order limit must be from 1 to 50.",
+    "salesOrder": "Sales must start before they end.",
+    "salesWindow": "Ticket sales must fit within the registration window.",
+    "paidPrice": "Paid tickets need a positive KZT price."
+  }
+}

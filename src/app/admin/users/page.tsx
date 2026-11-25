@@ -1,5 +1,7 @@
 "use client";
 import { useCallback, useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
+import { useIntlLocale, useLabel } from "@/i18n/labels";
 import {
   Badge,
   Button,
@@ -18,6 +20,9 @@ import { dateLabel } from "@/lib/organizer";
 import { useApiData } from "@/hooks/useApiData";
 import type { AdminUser } from "@/types/api";
 export default function AdminUsers() {
+  const t = useTranslations("admin.users");
+  const label = useLabel();
+  const locale = useIntlLocale();
   const { api, mode, viewer, revision, refresh } = useAdmin();
   const [draft, setDraft] = useState("");
   const [query, setQuery] = useState("");
@@ -54,7 +59,7 @@ export default function AdminUsers() {
       new FormData(event.currentTarget).get("reason"),
     ).trim();
     if (reason.length < 3) {
-      setError(new Error("Enter a restriction reason."));
+      setError(new Error(t("reasonRequired")));
       return;
     }
     setBusy(true);
@@ -67,9 +72,12 @@ export default function AdminUsers() {
           key(`suspend:${selected.user.id}:${reason}`),
         );
         if (result.status !== "suspended")
-          throw new Error("The suspension was not confirmed.");
+          throw new Error(t("suspendNotConfirmed"));
         setNotice(
-          `${mode === "demo" ? "Demo: " : ""}${selected.user.email} was suspended. Requests from this account are denied.`,
+          t("suspendedNotice", {
+            prefix: mode === "demo" ? t("demoPrefix") : "",
+            email: selected.user.email,
+          }),
         );
       } else {
         const result = await api.revokeUserAccess(
@@ -78,9 +86,13 @@ export default function AdminUsers() {
           key(`revoke:${selected.user.id}:${reason}`),
         );
         if (result.status !== "revoked")
-          throw new Error("Session revocation was not confirmed.");
+          throw new Error(t("revokeNotConfirmed"));
         setNotice(
-          `${mode === "demo" ? "Demo: " : ""}${result.revoked_sessions} active session(s) revoked for ${selected.user.email}. The account may sign in again.`,
+          t("revokedNotice", {
+            prefix: mode === "demo" ? t("demoPrefix") : "",
+            count: result.revoked_sessions,
+            email: selected.user.email,
+          }),
         );
       }
       setSelected(null);
@@ -91,15 +103,11 @@ export default function AdminUsers() {
       setBusy(false);
     }
   }
-  if (resource.loading)
-    return <LoadingSpinner label="Loading user directory…" />;
+  if (resource.loading) return <LoadingSpinner label={t("loading")} />;
   if (resource.error || !resource.data)
     return (
       <>
-        <AdminHeader
-          title="User management"
-          description="Inspect account roles and control platform access."
-        />
+        <AdminHeader title={t("title")} description={t("errorDescription")} />
         <AdminErrorState error={resource.error} retry={resource.retry} />
       </>
     );
@@ -107,11 +115,11 @@ export default function AdminUsers() {
   return (
     <>
       <AdminHeader
-        title="User management"
-        description="Inspect roles, revoke sessions, or suspend accounts."
+        title={t("title")}
+        description={t("description")}
         action={
           <Button variant="outlined" onClick={resource.retry}>
-            Refresh users
+            {t("refresh")}
           </Button>
         }
       />
@@ -131,49 +139,46 @@ export default function AdminUsers() {
         }}
       >
         <Input
-          label="Search users by email"
+          label={t("searchLabel")}
           placeholder="name@example.com"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           helperText={
-            mode === "demo"
-              ? "Sample records also support name search."
-              : "Search uses the live directory’s email filter."
+            mode === "demo" ? t("demoSearchHelp") : t("liveSearchHelp")
           }
         />
         <Button type="submit" variant="outlined">
-          Search users
+          {t("search")}
         </Button>
       </form>
       <Select
-        label="Account status"
+        label={t("statusLabel")}
         value={status}
         onChange={(event) => setStatus(event.target.value)}
       >
-        <option value="">All accounts</option>
-        <option value="active">Active</option>
-        <option value="suspended">Suspended</option>
+        <option value="">{t("allAccounts")}</option>
+        <option value="active">{t("active")}</option>
+        <option value="suspended">{t("suspended")}</option>
       </Select>
       {mode === "live" && resource.data.length >= 100 && (
-        <p className="text-label text-text-secondary">
-          Directory results are limited to 100 records. Enter an email address
-          to narrow the search beyond this list.
-        </p>
+        <p className="text-label text-text-secondary">{t("limitNotice")}</p>
       )}
       <Card className="overflow-hidden p-0">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px] text-left text-label">
             <thead className="border-b border-divider bg-background text-text-secondary">
               <tr>
-                {["User", "Roles", "Account", "Actions"].map((label) => (
-                  <th
-                    key={label}
-                    scope="col"
-                    className="px-lg py-md font-medium"
-                  >
-                    {label}
-                  </th>
-                ))}
+                {(["user", "roles", "account", "actions"] as const).map(
+                  (column) => (
+                    <th
+                      key={column}
+                      scope="col"
+                      className="px-lg py-md font-medium"
+                    >
+                      {t(`columns.${column}`)}
+                    </th>
+                  ),
+                )}
               </tr>
             </thead>
             <tbody>
@@ -184,26 +189,27 @@ export default function AdminUsers() {
                 >
                   <td className="px-lg py-lg">
                     <p className="font-medium">
-                      {user.full_name ?? "Unnamed user"}
-                      {user.id === viewer.id ? " (you)" : ""}
+                      {user.full_name ?? t("unnamed")}
+                      {user.id === viewer.id ? t("you") : ""}
                     </p>
                     <p className="mt-xs text-text-secondary">{user.email}</p>
                   </td>
                   <td className="px-lg py-lg">
                     <div className="flex flex-wrap gap-sm">
                       {user.roles.map((role) => (
-                        <Badge key={role}>{roleLabel(role)}</Badge>
+                        <Badge key={role}>{label(roleLabel(role))}</Badge>
                       ))}
                     </div>
                   </td>
                   <td className="px-lg py-lg">
                     <Badge variant={user.is_active ? "success" : "error"}>
-                      {user.is_active ? "Active" : "Suspended"}
+                      {user.is_active ? t("active") : t("suspended")}
                     </Badge>
                     {user.last_access_revoked_at && (
                       <p className="mt-sm text-text-secondary">
-                        Sessions revoked{" "}
-                        {dateLabel(user.last_access_revoked_at)}
+                        {t("sessionsRevoked", {
+                          date: dateLabel(user.last_access_revoked_at, locale),
+                        })}
                       </p>
                     )}
                   </td>
@@ -214,7 +220,7 @@ export default function AdminUsers() {
                         className="px-sm text-label"
                         onClick={() => open(user, "review")}
                       >
-                        View user
+                        {t("viewUser")}
                       </Button>
                       <Button
                         variant="outlined"
@@ -222,7 +228,7 @@ export default function AdminUsers() {
                         disabled={user.id === viewer.id || !user.is_active}
                         onClick={() => open(user, "revoke")}
                       >
-                        Revoke access
+                        {t("revokeAccess")}
                       </Button>
                       <Button
                         variant="text"
@@ -230,7 +236,7 @@ export default function AdminUsers() {
                         disabled={user.id === viewer.id || !user.is_active}
                         onClick={() => open(user, "suspend")}
                       >
-                        Suspend account
+                        {t("suspendAccount")}
                       </Button>
                     </div>
                   </td>
@@ -240,27 +246,23 @@ export default function AdminUsers() {
           </table>
           {!shown.length && (
             <div className="space-y-sm p-xl">
-              <h2 className="text-title">No matching users</h2>
+              <h2 className="text-title">{t("noMatchTitle")}</h2>
               <p className="text-label text-text-secondary">
-                Try another email or account status.
+                {t("noMatchBody")}
               </p>
             </div>
           )}
         </div>
       </Card>
-      <p className="text-label text-text-secondary">
-        Revoke access ends active sessions while allowing a later sign-in.
-        Suspension blocks authenticated requests. You cannot restrict your own
-        Admin account.
-      </p>
+      <p className="text-label text-text-secondary">{t("footnote")}</p>
       {selected && (
         <Modal
           title={
             selected.action === "review"
-              ? "User account details"
+              ? t("detailsModalTitle")
               : selected.action === "revoke"
-                ? "Revoke user access?"
-                : "Suspend this account?"
+                ? t("revokeModalTitle")
+                : t("suspendModalTitle")
           }
           busy={busy}
           onClose={() => {
@@ -270,14 +272,14 @@ export default function AdminUsers() {
         >
           <div className="space-y-sm">
             <h3 className="text-title">
-              {selected.user.full_name ?? "User account"}
+              {selected.user.full_name ?? t("userAccount")}
             </h3>
             <p className="break-all text-label text-text-secondary">
               {selected.user.email}
             </p>
             <div className="flex flex-wrap gap-sm">
               {selected.user.roles.map((role) => (
-                <Badge key={role}>{roleLabel(role)}</Badge>
+                <Badge key={role}>{label(roleLabel(role))}</Badge>
               ))}
             </div>
           </div>
@@ -286,38 +288,44 @@ export default function AdminUsers() {
             <>
               <dl className="space-y-md text-label">
                 <div>
-                  <dt className="text-text-secondary">Account status</dt>
+                  <dt className="text-text-secondary">{t("accountStatus")}</dt>
                   <dd className="mt-xs">
-                    {selected.user.is_active ? "Active" : "Suspended"}
+                    {selected.user.is_active ? t("active") : t("suspended")}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-text-secondary">Email verification</dt>
+                  <dt className="text-text-secondary">
+                    {t("emailVerification")}
+                  </dt>
                   <dd className="mt-xs">
-                    {selected.user.email_verified ? "Verified" : "Not verified"}
+                    {selected.user.email_verified
+                      ? t("verified")
+                      : t("notVerified")}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-text-secondary">User ID</dt>
+                  <dt className="text-text-secondary">{t("userId")}</dt>
                   <dd className="mt-xs break-all">{selected.user.id}</dd>
                 </div>
                 <div>
-                  <dt className="text-text-secondary">Active sessions</dt>
+                  <dt className="text-text-secondary">{t("activeSessions")}</dt>
                   <dd className="mt-xs">
-                    {selected.user.active_sessions ?? "Unavailable"}
+                    {selected.user.active_sessions ?? t("unavailable")}
                   </dd>
                 </div>
                 {selected.user.created_at && (
                   <div>
-                    <dt className="text-text-secondary">Registered</dt>
+                    <dt className="text-text-secondary">{t("registered")}</dt>
                     <dd className="mt-xs">
-                      {dateLabel(selected.user.created_at)}
+                      {dateLabel(selected.user.created_at, locale)}
                     </dd>
                   </div>
                 )}
                 {selected.user.suspension_reason && (
                   <div>
-                    <dt className="text-text-secondary">Suspension reason</dt>
+                    <dt className="text-text-secondary">
+                      {t("suspensionReason")}
+                    </dt>
                     <dd className="mt-xs whitespace-pre-wrap break-words">
                       {selected.user.suspension_reason}
                     </dd>
@@ -332,7 +340,7 @@ export default function AdminUsers() {
                   }
                   onClick={() => open(selected.user, "revoke")}
                 >
-                  Revoke access
+                  {t("revokeAccess")}
                 </Button>
                 <Button
                   variant="text"
@@ -341,7 +349,7 @@ export default function AdminUsers() {
                   }
                   onClick={() => open(selected.user, "suspend")}
                 >
-                  Suspend account
+                  {t("suspendAccount")}
                 </Button>
               </div>
             </>
@@ -349,14 +357,14 @@ export default function AdminUsers() {
             <form onSubmit={submit} className="space-y-md">
               <p className="text-label text-text-secondary">
                 {selected.action === "revoke"
-                  ? "End active sessions for this user. They may sign in again with valid credentials."
-                  : "Block authenticated access for this account. Existing event, ticket, and order records remain retained."}
+                  ? t("revokeHelp")
+                  : t("suspendHelp")}
               </p>
               <Textarea
                 label={
                   selected.action === "revoke"
-                    ? "Access revocation reason"
-                    : "Account suspension reason"
+                    ? t("revokeReasonLabel")
+                    : t("suspendReasonLabel")
                 }
                 name="reason"
                 required
@@ -367,14 +375,14 @@ export default function AdminUsers() {
               {mode === "live" && (
                 <p className="text-label text-text-secondary">
                   {selected.action === "revoke"
-                    ? "Session revocation requires a new backend route. Demo data supports the complete preview."
-                    : "Custom restriction reasons are not yet retained by the live backend."}
+                    ? t("liveRevokeNotice")
+                    : t("liveSuspendNotice")}
                 </p>
               )}
               <Button type="submit" loading={busy} className="w-full bg-error">
                 {selected.action === "revoke"
-                  ? "Confirm access revocation"
-                  : "Confirm account suspension"}
+                  ? t("confirmRevoke")
+                  : t("confirmSuspend")}
               </Button>
             </form>
           )}

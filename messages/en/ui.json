@@ -1,0 +1,15 @@
+{
+  "Button": {
+    "loading": "Loading"
+  },
+  "LoadingSpinner": {
+    "loading": "Loading…"
+  },
+  "Modal": {
+    "close": "Close dialog"
+  },
+  "ErrorState": {
+    "tryAgain": "Try again",
+    "signIn": "Sign in"
+  }
+}

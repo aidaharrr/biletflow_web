@@ -2,20 +2,38 @@ import { getTicketPdf, getTicketQr } from "./api";
 import { eventDate } from "./events";
 import type { Event, Ticket, TicketType } from "@/types/api";
 
+/** Translated text for the print window; built by the caller from its messages. */
+export interface PrintTicketStrings {
+  /** Intl locale for the event date, e.g. "kk-KZ". */
+  locale: string;
+  popupBlocked: string;
+  documentTitle: (id: string) => string;
+  preparing: string;
+  heading: string;
+  attendee: (name: string) => string;
+  ticketType: (name: string) => string;
+  admissionFallback: string;
+  seat: (seat: string) => string;
+  status: (status: Ticket["status"]) => string;
+  ticketId: (id: string) => string;
+  qrAlt: (id: string) => string;
+  footer: string;
+  print: string;
+  download: string;
+}
+
 /** Open synchronously from the click, then populate with canonical backend files. */
 export async function printTicket(
   ticket: Ticket,
   event: Event,
-  type?: TicketType,
+  type: TicketType | undefined,
+  strings: PrintTicketStrings,
 ) {
   const preview = window.open("", "_blank", "width=850,height=900");
-  if (!preview)
-    throw new Error(
-      "Your browser blocked the print preview. Allow pop-ups and try again.",
-    );
+  if (!preview) throw new Error(strings.popupBlocked);
   preview.opener = null;
-  preview.document.title = `Ticket ${ticket.id} · BiletFlow`;
-  preview.document.body.textContent = "Preparing your ticket…";
+  preview.document.title = strings.documentTitle(ticket.id);
+  preview.document.body.textContent = strings.preparing;
   const urls: string[] = [];
   try {
     const [qr, pdf] = await Promise.all([
@@ -38,29 +56,26 @@ export async function printTicket(
       element.textContent = value;
       main.append(element);
     };
-    text("h1", "BiletFlow · Admission ticket");
+    text("h1", strings.heading);
     text("h2", event.title);
-    text("p", `${eventDate(event)} · ${event.time_zone}`);
+    text("p", `${eventDate(event, strings.locale)} · ${event.time_zone}`);
     text("p", `${event.venue.name}, ${event.venue.address}`);
-    text("p", `Attendee: ${ticket.attendee_name}`);
-    text("p", `Ticket type: ${type?.name ?? "Admission"}`);
+    text("p", strings.attendee(ticket.attendee_name));
+    text("p", strings.ticketType(type?.name ?? strings.admissionFallback));
     const seat = [ticket.section, ticket.row, ticket.seat]
       .filter(Boolean)
       .join(" / ");
-    if (seat) text("p", `Section / row / seat: ${seat}`);
-    text("p", `Status: ${ticket.status.replace(/_/g, " ")}`);
-    text("p", `Ticket ID: ${ticket.id}`);
+    if (seat) text("p", strings.seat(seat));
+    text("p", strings.status(ticket.status));
+    text("p", strings.ticketId(ticket.id));
     const image = doc.createElement("img");
     image.src = qrUrl;
-    image.alt = `Admission QR code for ticket ${ticket.id}`;
+    image.alt = strings.qrAlt(ticket.id);
     main.append(image);
-    text(
-      "footer",
-      "Digital and printed copies share this ticket ID. Admission status is verified at the entrance.",
-    );
+    text("footer", strings.footer);
     const actions = doc.createElement("nav");
     const print = doc.createElement("button");
-    print.textContent = "Print / Save as PDF";
+    print.textContent = strings.print;
     print.disabled = true;
     image.onload = () => {
       print.disabled = false;
@@ -69,7 +84,7 @@ export async function printTicket(
     const download = doc.createElement("a");
     download.href = pdfUrl;
     download.download = `biletflow-ticket-${ticket.id}.pdf`;
-    download.textContent = "Download original PDF";
+    download.textContent = strings.download;
     actions.append(print, download);
     main.append(actions);
     doc.body.append(main);

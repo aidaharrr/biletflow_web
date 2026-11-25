@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
 import { Badge, Button, Card, Input, Select, Textarea } from "@/components/ui";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -70,6 +71,8 @@ const blank: Details = {
   visibility: "public",
   refund: "Contact the organizer to request a refund.",
 };
+/** Looks up a message in the wizard's "errors" section. */
+type ErrorText = (key: string) => string;
 function ticketDraft(type: TicketType, preserveId: boolean): TicketDraft {
   return {
     key: type.id,
@@ -105,25 +108,21 @@ function detailsFrom(event: Event): Details {
     refund: event.refund_policy,
   };
 }
-function eventBody(details: Details): EventWrite {
+function eventBody(details: Details, errorText: ErrorText): EventWrite {
   const starts = kazakhstanTime(details.starts),
     ends = kazakhstanTime(details.ends),
     opens = kazakhstanTime(details.opens),
     closes = kazakhstanTime(details.closes);
   if (Date.parse(starts) <= Date.now())
-    throw new Error(
-      "Choose a future event start date. Reschedule duplicated past events before publishing.",
-    );
-  if (ends <= starts) throw new Error("Event end must be after the start.");
+    throw new Error(errorText("futureStart"));
+  if (ends <= starts) throw new Error(errorText("endAfterStart"));
   if (opens >= closes || closes > starts)
-    throw new Error(
-      "Registration must open before it closes, and close no later than the event start.",
-    );
+    throw new Error(errorText("registrationWindow"));
   const capacity = Number(details.capacity);
   if (!Number.isSafeInteger(capacity) || capacity < 1)
-    throw new Error("Capacity must be a positive whole number.");
+    throw new Error(errorText("capacity"));
   if (details.banner && !/^https?:$/.test(new URL(details.banner).protocol))
-    throw new Error("Banner images must use an HTTP or HTTPS URL.");
+    throw new Error(errorText("bannerProtocol"));
   return {
     title: details.title.trim(),
     category: details.category.trim(),
@@ -163,8 +162,8 @@ export function EventWizard({
     [draftId, sourceId],
   );
   const resource = useApiData(load);
-  if (resource.loading)
-    return <LoadingSpinner label="Opening your event draft…" />;
+  const t = useTranslations("wizard");
+  if (resource.loading) return <LoadingSpinner label={t("loading")} />;
   if (resource.error || !resource.data)
     return <ErrorState error={resource.error} retry={resource.retry} />;
   if (
@@ -174,13 +173,17 @@ export function EventWizard({
     return (
       <Card className="space-y-md">
         <h1 className="text-title">
-          This event can no longer be edited ({resource.data.draft.status})
+          {t("locked.title", {
+            status: t.has(`locked.status.${resource.data.draft.status}`)
+              ? t(`locked.status.${resource.data.draft.status}`)
+              : resource.data.draft.status,
+          })}
         </h1>
         <Link
           href={`/organizer/events/${resource.data.draft.id}`}
           className="underline"
         >
-          Open event management
+          {t("locked.open")}
         </Link>
       </Card>
     );
@@ -196,11 +199,13 @@ function WizardForm({
   source: Event | null;
 }) {
   const router = useRouter();
+  const t = useTranslations("wizard");
+  const errorText: ErrorText = (key) => t(`errors.${key}`);
   /** Published events: details only; ticket types are managed on the event page. */
   const editingLive = draft?.status === "published";
   const [step, setStep] = useState(1);
   const [details, setDetails] = useState<Details>(() =>
-    draft ? detailsFrom(draft) : blank,
+    draft ? detailsFrom(draft) : { ...blank, refund: t("defaults.refund") },
   );
   const [saved, setSaved] = useState<Event | null>(draft);
   const savedRef = useRef<Event | null>(draft);
@@ -248,7 +253,7 @@ function WizardForm({
     setError(null);
     setBannerFailed(false);
     try {
-      const body = eventBody(details);
+      const body = eventBody(details, errorText);
       let event: Event;
       if (savedRef.current) {
         const editable: Partial<EventWrite> = { ...body };
@@ -287,7 +292,7 @@ function WizardForm({
         setTickets([
           {
             key: "initial",
-            name: "General admission",
+            name: t("defaults.ticketName"),
             description: "",
             kind: "free",
             price: "0",
@@ -309,7 +314,7 @@ function WizardForm({
       maximum = Number(row.maximum);
     const start = kazakhstanTime(row.start),
       end = kazakhstanTime(row.end);
-    if (!row.name.trim()) throw new Error("Each ticket type needs a name.");
+    if (!row.name.trim()) throw new Error(errorText("ticketName"));
     if (
       !Number.isSafeInteger(quantity) ||
       quantity < 1 ||
@@ -317,20 +322,16 @@ function WizardForm({
       maximum < 1 ||
       maximum > 50
     )
-      throw new Error(
-        "Use positive ticket quantities and a per-order limit from 1 to 50.",
-      );
+      throw new Error(errorText("ticketLimits"));
     if (
       start >= end ||
       start < kazakhstanTime(details.opens) ||
       end > kazakhstanTime(details.closes)
     )
-      throw new Error(
-        "Ticket sales must start before they end and stay within the registration window.",
-      );
+      throw new Error(errorText("ticketSalesWindow"));
     const price = row.kind === "free" ? 0 : parseKZT(row.price);
     if (row.kind === "paid" && price <= 0)
-      throw new Error("Paid tickets need a positive KZT price.");
+      throw new Error(errorText("paidPrice"));
     return {
       name: row.name.trim(),
       description: row.description.trim(),
@@ -348,15 +349,13 @@ function WizardForm({
     setError(null);
     try {
       if (!savedRef.current || !tickets.length)
-        throw new Error("Configure at least one ticket type.");
+        throw new Error(errorText("noTickets"));
       const bodies = tickets.map(ticketBody);
       if (
         bodies.reduce((sum, type) => sum + type.quantity, 0) >
         Number(details.capacity)
       )
-        throw new Error(
-          "Total ticket quantity must not exceed event capacity. Update capacity in Step 1 if needed.",
-        );
+        throw new Error(errorText("totalCapacity"));
       const types = [...savedRef.current.available_ticket_types];
       for (let i = 0; i < tickets.length; i++) {
         if (tickets[i].savedId) continue;
@@ -401,53 +400,45 @@ function WizardForm({
     <>
       <header className="space-y-sm">
         <p className="text-label uppercase tracking-widest text-primary">
-          Bring your next idea to life
+          {t("header.eyebrow")}
         </p>
         <h1 className="font-brand text-3xl font-semibold">
           {editingLive
-            ? "Edit published event"
+            ? t("header.editLive")
             : draft
-              ? "Complete your event draft"
-              : "Create a new event"}
+              ? t("header.completeDraft")
+              : t("header.create")}
         </h1>
-        <p className="text-label text-text-secondary">
-          General admission · Dates and times in Kazakhstan (UTC+05:00)
-        </p>
+        <p className="text-label text-text-secondary">{t("header.subtitle")}</p>
         {editingLive && (
           <p
             role="note"
             className="rounded-input border border-divider bg-background p-md text-label"
           >
-            This event is live. Saved changes appear immediately and attendees
-            with confirmed orders are notified. Manage ticket types from the
-            event page. Paid events approved by an administrator must be
-            unpublished before their details can change, and then need a new
-            review.
+            {t("header.liveNote")}
           </p>
         )}
         {saved && !editingLive && (
           <p className="break-all text-label text-text-secondary">
-            Saved draft: {saved.id}
+            {t("header.savedDraft", { id: saved.id })}
           </p>
         )}
       </header>
       <ol
-        aria-label="Event creation progress"
+        aria-label={t("steps.ariaLabel")}
         className={`grid gap-sm sm:grid-cols-3 ${editingLive ? "hidden" : ""}`}
       >
-        {[
-          "Event details",
-          "Ticket configuration",
-          "Review & paid activation",
-        ].map((label, index) => (
-          <li
-            key={label}
-            aria-current={step === index + 1 ? "step" : undefined}
-            className={`rounded-input border px-md py-md text-label ${step === index + 1 ? "border-primary bg-primary/5 font-medium text-primary" : "border-divider bg-surface text-text-secondary"}`}
-          >
-            {index + 1}. {label}
-          </li>
-        ))}
+        {[t("steps.details"), t("steps.tickets"), t("steps.review")].map(
+          (label, index) => (
+            <li
+              key={label}
+              aria-current={step === index + 1 ? "step" : undefined}
+              className={`rounded-input border px-md py-md text-label ${step === index + 1 ? "border-primary bg-primary/5 font-medium text-primary" : "border-divider bg-surface text-text-secondary"}`}
+            >
+              {index + 1}. {label}
+            </li>
+          ),
+        )}
       </ol>
       {!!error && <ErrorState error={error} />}{" "}
       {step === 1 && (
@@ -455,7 +446,7 @@ function WizardForm({
           <form onSubmit={saveDetails} className="space-y-lg">
             <div className="grid gap-lg sm:grid-cols-2">
               <Input
-                label="Event title"
+                label={t("details.title")}
                 value={details.title}
                 onChange={(event) => change("title", event.target.value)}
                 required
@@ -464,7 +455,7 @@ function WizardForm({
                 disabled={busy}
               />
               <Input
-                label="Category"
+                label={t("details.category")}
                 list="event-categories"
                 value={details.category}
                 onChange={(event) => change("category", event.target.value)}
@@ -475,12 +466,16 @@ function WizardForm({
               />
               <datalist id="event-categories">
                 {["concerts", "tech", "student", "sports"].map((value) => (
-                  <option key={value} value={value} />
+                  <option
+                    key={value}
+                    value={value}
+                    label={t(`categories.${value}`)}
+                  />
                 ))}
               </datalist>
             </div>
             <Input
-              label="Banner image URL (optional)"
+              label={t("details.banner")}
               type="url"
               value={details.banner}
               onChange={(event) => change("banner", event.target.value)}
@@ -488,7 +483,7 @@ function WizardForm({
               disabled={busy}
             />
             <Textarea
-              label="Event description"
+              label={t("details.description")}
               value={details.description}
               onChange={(event) => change("description", event.target.value)}
               required
@@ -498,10 +493,10 @@ function WizardForm({
             <div className="grid gap-lg sm:grid-cols-2">
               {(
                 [
-                  ["starts", "Event starts"],
-                  ["ends", "Event ends"],
-                  ["opens", "Registration opens"],
-                  ["closes", "Registration closes"],
+                  ["starts", t("details.starts")],
+                  ["ends", t("details.ends")],
+                  ["opens", t("details.opens")],
+                  ["closes", t("details.closes")],
                 ] as const
               ).map(([field, label]) => (
                 <Input
@@ -517,7 +512,7 @@ function WizardForm({
             </div>
             <div className="grid gap-lg sm:grid-cols-2">
               <Input
-                label="Venue name"
+                label={t("details.venue")}
                 value={details.venue}
                 onChange={(event) => change("venue", event.target.value)}
                 required
@@ -526,7 +521,7 @@ function WizardForm({
                 disabled={busy || !!saved}
               />
               <Input
-                label="City"
+                label={t("details.city")}
                 value={details.city}
                 onChange={(event) => change("city", event.target.value)}
                 required
@@ -534,7 +529,7 @@ function WizardForm({
               />
             </div>
             <Input
-              label="Venue address"
+              label={t("details.address")}
               value={details.address}
               onChange={(event) => change("address", event.target.value)}
               required
@@ -544,13 +539,12 @@ function WizardForm({
             />
             {saved && (
               <p className="text-label text-text-secondary">
-                Saved events retain their venue. Event dates, description,
-                capacity, and registration settings can be updated here.
+                {t("details.savedVenueNote")}
               </p>
             )}
             <div className="grid gap-lg sm:grid-cols-2">
               <Input
-                label="Event capacity"
+                label={t("details.capacity")}
                 type="number"
                 min={1}
                 step={1}
@@ -560,39 +554,40 @@ function WizardForm({
                 disabled={busy}
               />
               <Select
-                label="Event visibility"
+                label={t("details.visibility")}
                 value={details.visibility}
                 onChange={(event) => change("visibility", event.target.value)}
                 disabled={busy}
               >
-                <option value="public">Public</option>
-                <option value="unlisted">Unlisted</option>
-                <option value="private">Private</option>
+                <option value="public">{t("visibility.public")}</option>
+                <option value="unlisted">{t("visibility.unlisted")}</option>
+                <option value="private">{t("visibility.private")}</option>
               </Select>
             </div>
             <Textarea
-              label="Refund policy"
+              label={t("details.refund")}
               value={details.refund}
               onChange={(event) => change("refund", event.target.value)}
               required
               disabled={busy}
             />
             <Button type="submit" loading={busy}>
-              {editingLive ? "Save changes" : "Save details & continue"}
+              {editingLive
+                ? t("actions.saveChanges")
+                : t("actions.saveDetails")}
             </Button>
             {editingLive && (
               <Link
                 href={`/organizer/events/${draft.id}`}
                 className="ml-md text-label underline"
               >
-                Cancel
+                {t("actions.cancel")}
               </Link>
             )}
             {bannerFailed && (
               <div className="space-y-md">
                 <p className="text-label text-text-secondary">
-                  Your event draft is saved, but the banner could not be
-                  attached. Retry saving or continue without a banner.
+                  {t("bannerFailed")}
                 </p>
                 <Button
                   variant="outlined"
@@ -606,7 +601,7 @@ function WizardForm({
                       setTickets([
                         {
                           key: "initial",
-                          name: "General admission",
+                          name: t("defaults.ticketName"),
                           description: "",
                           kind: "free",
                           price: "0",
@@ -619,7 +614,7 @@ function WizardForm({
                     setStep(2);
                   }}
                 >
-                  Continue without banner
+                  {t("actions.continueWithoutBanner")}
                 </Button>
               </div>
             )}
@@ -631,9 +626,11 @@ function WizardForm({
           {tickets.map((ticket, index) => (
             <Card key={ticket.key} className="space-y-lg">
               <div className="flex items-center justify-between gap-md">
-                <h2 className="text-title">Ticket type {index + 1}</h2>
+                <h2 className="text-title">
+                  {t("tickets.heading", { number: index + 1 })}
+                </h2>
                 {ticket.savedId ? (
-                  <Badge variant="success">Saved</Badge>
+                  <Badge variant="success">{t("tickets.saved")}</Badge>
                 ) : (
                   <Button
                     variant="text"
@@ -644,19 +641,18 @@ function WizardForm({
                       )
                     }
                   >
-                    Remove ticket type {index + 1}
+                    {t("tickets.remove", { number: index + 1 })}
                   </Button>
                 )}
               </div>
               {ticket.savedId && (
                 <p className="text-label text-text-secondary">
-                  This ticket type is saved. Add another type or continue to
-                  review.
+                  {t("tickets.savedNote")}
                 </p>
               )}
               <div className="grid gap-lg sm:grid-cols-2">
                 <Input
-                  label={`Ticket ${index + 1} name`}
+                  label={t("tickets.name", { number: index + 1 })}
                   value={ticket.name}
                   onChange={(event) =>
                     patchTicket(ticket.key, "name", event.target.value)
@@ -666,18 +662,18 @@ function WizardForm({
                   disabled={busy || !!ticket.savedId}
                 />
                 <Select
-                  label={`Ticket ${index + 1} kind`}
+                  label={t("tickets.kind", { number: index + 1 })}
                   value={ticket.kind}
                   onChange={(event) =>
                     patchTicket(ticket.key, "kind", event.target.value)
                   }
                   disabled={busy || !!ticket.savedId}
                 >
-                  <option value="free">Free</option>
-                  <option value="paid">Paid (KZT)</option>
+                  <option value="free">{t("tickets.kindFree")}</option>
+                  <option value="paid">{t("tickets.kindPaid")}</option>
                 </Select>
                 <Input
-                  label={`Ticket ${index + 1} price (KZT)`}
+                  label={t("tickets.price", { number: index + 1 })}
                   inputMode="decimal"
                   value={ticket.kind === "free" ? "0" : ticket.price}
                   onChange={(event) =>
@@ -687,7 +683,7 @@ function WizardForm({
                   disabled={busy || !!ticket.savedId || ticket.kind === "free"}
                 />
                 <Input
-                  label={`Ticket ${index + 1} quantity`}
+                  label={t("tickets.quantity", { number: index + 1 })}
                   type="number"
                   min={1}
                   step={1}
@@ -699,7 +695,7 @@ function WizardForm({
                   disabled={busy || !!ticket.savedId}
                 />
                 <Input
-                  label={`Ticket ${index + 1} sales start`}
+                  label={t("tickets.salesStart", { number: index + 1 })}
                   type="datetime-local"
                   value={ticket.start}
                   onChange={(event) =>
@@ -709,7 +705,7 @@ function WizardForm({
                   disabled={busy || !!ticket.savedId}
                 />
                 <Input
-                  label={`Ticket ${index + 1} sales end`}
+                  label={t("tickets.salesEnd", { number: index + 1 })}
                   type="datetime-local"
                   value={ticket.end}
                   onChange={(event) =>
@@ -719,7 +715,7 @@ function WizardForm({
                   disabled={busy || !!ticket.savedId}
                 />
                 <Input
-                  label={`Ticket ${index + 1} max per order`}
+                  label={t("tickets.maximum", { number: index + 1 })}
                   type="number"
                   min={1}
                   max={50}
@@ -733,7 +729,7 @@ function WizardForm({
                 />
               </div>
               <Textarea
-                label={`Ticket ${index + 1} description`}
+                label={t("tickets.description", { number: index + 1 })}
                 value={ticket.description}
                 onChange={(event) =>
                   patchTicket(ticket.key, "description", event.target.value)
@@ -763,7 +759,7 @@ function WizardForm({
                 ])
               }
             >
-              Add ticket type
+              {t("actions.addTicketType")}
             </Button>
             <Button
               variant="text"
@@ -773,10 +769,10 @@ function WizardForm({
                 setStep(1);
               }}
             >
-              Back to details
+              {t("actions.backToDetails")}
             </Button>
             <Button type="submit" disabled={!tickets.length} loading={busy}>
-              Save tickets & continue
+              {t("actions.saveTickets")}
             </Button>
           </div>
         </form>
@@ -784,7 +780,7 @@ function WizardForm({
       {step === 3 && saved && (
         <>
           <Card className="space-y-lg">
-            <h2 className="text-title">Review before publication</h2>
+            <h2 className="text-title">{t("review.heading")}</h2>
             <EventBanner
               event={{
                 ...saved,
@@ -811,18 +807,22 @@ function WizardForm({
                 className="flex justify-between gap-md border-t border-divider pt-md text-label"
               >
                 <span>
-                  {ticket.name} · {ticket.quantity} tickets
+                  {ticket.name} ·{" "}
+                  {t("review.ticketCount", {
+                    quantity: ticket.quantity,
+                    count: Number(ticket.quantity) || 0,
+                  })}
                 </span>
                 <span>
                   {ticket.kind === "free"
-                    ? "Free"
+                    ? t("review.free")
                     : formatKZT(parseKZT(ticket.price))}
                 </span>
               </div>
             ))}
             {bannerSkipped && (
               <p className="text-label text-text-secondary">
-                Publishing without a banner image.
+                {t("review.noBanner")}
               </p>
             )}
           </Card>
@@ -836,8 +836,7 @@ function WizardForm({
           ) : (
             <Card>
               <p className="text-label text-text-secondary">
-                Free-only events do not require paid-sales activation. Attendees
-                can register without payment.
+                {t("review.freeOnly")}
               </p>
             </Card>
           )}
@@ -850,20 +849,20 @@ function WizardForm({
                 setStep(2);
               }}
             >
-              Back to tickets
+              {t("actions.backToTickets")}
             </Button>
             <Button
               loading={busy}
               disabled={hasPaid && !paidActive}
               onClick={publish}
             >
-              Publish event
+              {t("actions.publish")}
             </Button>
             <Link
               href={`/organizer/events/${saved.id}`}
               className="inline-flex min-h-button items-center px-md text-label underline"
             >
-              Keep as draft
+              {t("actions.keepDraft")}
             </Link>
           </div>
         </>

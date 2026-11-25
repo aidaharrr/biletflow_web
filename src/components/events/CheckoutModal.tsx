@@ -9,6 +9,7 @@ import {
   completeCheckoutSession,
 } from "@/lib/api";
 import { formatKZT } from "@/lib/money";
+import { useTranslations } from "next-intl";
 import type {
   CheckoutItem,
   CheckoutRequest,
@@ -30,6 +31,8 @@ export function CheckoutModal({
   user: User;
   onClose: () => void;
 }) {
+  const t = useTranslations("checkout");
+  const money = (amount: number) => formatKZT(amount);
   const dialog = useRef<HTMLDialogElement>(null);
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
@@ -82,9 +85,7 @@ export function CheckoutModal({
         completionKey.current,
       );
       if (confirmed.status !== "confirmed")
-        throw new Error(
-          "Checkout was not completed. Your tickets have not been issued.",
-        );
+        throw new Error(t("CheckoutModal.notCompleted"));
       router.push(`/orders/${confirmed.id}`);
     } catch (error) {
       setError(error);
@@ -117,7 +118,9 @@ export function CheckoutModal({
               id="checkout-title"
               className="font-brand text-2xl font-semibold"
             >
-              {order ? "Review your booking" : "Your attendee details"}
+              {order
+                ? t("CheckoutModal.reviewTitle")
+                : t("CheckoutModal.detailsTitle")}
             </h2>
             <p className="mt-sm text-label text-text-secondary">
               {event.title}
@@ -125,7 +128,7 @@ export function CheckoutModal({
           </div>
           <button
             type="button"
-            aria-label="Close checkout"
+            aria-label={t("CheckoutModal.closeAria")}
             disabled={pending}
             onClick={close}
             className="rounded-input p-sm text-xl disabled:opacity-disabled"
@@ -141,7 +144,7 @@ export function CheckoutModal({
         {!order ? (
           <form className="space-y-lg" onSubmit={reserve}>
             <Input
-              label="Full name"
+              label={t("CheckoutModal.fullName")}
               name="name"
               defaultValue={user.full_name ?? ""}
               required
@@ -151,32 +154,35 @@ export function CheckoutModal({
               disabled={pending}
             />
             <Input
-              label="Email"
+              label={t("CheckoutModal.email")}
               name="email"
               type="email"
               defaultValue={user.email}
               required
               autoComplete="email"
               disabled={pending}
-              helperText="Your tickets will be associated with this attendee."
+              helperText={t("CheckoutModal.emailHelper")}
             />
             {promoCode && (
               <p className="text-label text-text-secondary">
-                Promo code:{" "}
-                <strong className="text-text-primary">{promoCode}</strong>
+                {t.rich("CheckoutModal.promoCode", {
+                  code: promoCode,
+                  strong: (chunks) => (
+                    <strong className="text-text-primary">{chunks}</strong>
+                  ),
+                })}
               </p>
             )}
             <p className="text-label text-text-secondary">
-              Review the final total before confirming. Paid bookings use a demo
-              payment; no real money is charged.
+              {t("CheckoutModal.demoNote")}
             </p>
             <Button
               type="submit"
               className="w-full"
               loading={pending}
-              loadingLabel="Reserving tickets"
+              loadingLabel={t("CheckoutModal.reserving")}
             >
-              Reserve and review
+              {t("CheckoutModal.reserve")}
             </Button>
           </form>
         ) : (
@@ -195,12 +201,15 @@ export function CheckoutModal({
                     className="flex justify-between gap-md text-label"
                   >
                     <span>
-                      {item.quantity} × {type?.name ?? "Ticket"}
+                      {t("CheckoutModal.lineItem", {
+                        quantity: item.quantity,
+                        name: type?.name ?? t("CheckoutModal.ticketFallback"),
+                      })}
                     </span>
                     {"unit_price_minor" in item &&
                       typeof item.unit_price_minor === "number" && (
                         <span>
-                          {formatKZT(item.quantity * item.unit_price_minor)}
+                          {money(item.quantity * item.unit_price_minor)}
                         </span>
                       )}
                   </div>
@@ -209,37 +218,40 @@ export function CheckoutModal({
             </div>
             <dl className="space-y-sm text-label">
               <div className="flex justify-between">
-                <dt>Subtotal</dt>
-                <dd>{formatKZT(order.subtotal_minor)}</dd>
+                <dt>{t("CheckoutModal.subtotal")}</dt>
+                <dd>{money(order.subtotal_minor)}</dd>
               </div>
               {order.discount_minor > 0 && (
                 <div className="flex justify-between">
                   <dt>
-                    Discount
                     {(order.promo_code ?? promoCode)
-                      ? ` (${order.promo_code ?? promoCode})`
-                      : ""}
+                      ? t("CheckoutModal.discountWithCode", {
+                          code: order.promo_code ?? promoCode,
+                        })
+                      : t("CheckoutModal.discount")}
                   </dt>
-                  <dd>−{formatKZT(order.discount_minor)}</dd>
+                  <dd>−{money(order.discount_minor)}</dd>
                 </div>
               )}
               <div className="flex justify-between">
-                <dt>Processing fee</dt>
-                <dd>{formatKZT(order.processing_fee_minor)}</dd>
+                <dt>{t("CheckoutModal.processingFee")}</dt>
+                <dd>{money(order.processing_fee_minor)}</dd>
               </div>
               <div className="flex justify-between border-t border-divider pt-md text-lg font-semibold">
-                <dt>Total</dt>
-                <dd>{formatKZT(order.total_minor)}</dd>
+                <dt>{t("CheckoutModal.total")}</dt>
+                <dd>{money(order.total_minor)}</dd>
               </div>
             </dl>
             <p role="status" className="text-label text-text-secondary">
               {seconds
-                ? `Reservation expires in ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}.`
-                : "This reservation has expired. Close checkout and select your tickets again."}
+                ? t("CheckoutModal.expiresIn", {
+                    time: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`,
+                  })
+                : t("CheckoutModal.expired")}
             </p>
             {order.total_minor > 0 && (
               <p className="rounded-input bg-background p-md text-label text-text-secondary">
-                Demo payment · No card details or real money required.
+                {t("CheckoutModal.demoPayment")}
               </p>
             )}
             <Button
@@ -247,11 +259,13 @@ export function CheckoutModal({
               loading={pending}
               disabled={!seconds}
               onClick={complete}
-              loadingLabel="Confirming your booking"
+              loadingLabel={t("CheckoutModal.confirming")}
             >
               {order.total_minor === 0
-                ? "Confirm free registration"
-                : `Confirm demo payment · ${formatKZT(order.total_minor)}`}
+                ? t("CheckoutModal.confirmFree")
+                : t("CheckoutModal.confirmPaid", {
+                    amount: money(order.total_minor),
+                  })}
             </Button>
           </div>
         )}

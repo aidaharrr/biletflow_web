@@ -6,28 +6,30 @@ import { cn } from "@/lib/cn";
 import { Button, Card } from "@/components/ui";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 const navigation = [
-  ["/organizer/dashboard", "Overview"],
-  ["/organizer/events/create", "Create event"],
-  ["/organizer/campaigns", "Campaigns"],
-  ["/organizer/support", "Support inbox"],
-];
+  ["/organizer/dashboard", "overview"],
+  ["/organizer/events/create", "createEvent"],
+  ["/organizer/campaigns", "campaigns"],
+  ["/organizer/support", "support"],
+] as const;
 export function OrganizerShell({ children }: { children: ReactNode }) {
   const path = usePathname();
   const { user, signOut, loading } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  const t = useTranslations("organizer.shell");
   if (!loading && !user)
     return (
       <main className="mx-auto max-w-3xl px-md py-xl">
         <Card className="space-y-md">
-          <h1 className="text-title">Sign in to your organizer account</h1>
+          <h1 className="text-title">{t("signInTitle")}</h1>
           <Link
             href={`/login?next=${encodeURIComponent(path)}`}
             className="underline"
           >
-            Sign in
+            {t("signIn")}
           </Link>
         </Card>
       </main>
@@ -35,7 +37,7 @@ export function OrganizerShell({ children }: { children: ReactNode }) {
   if (user && !user.roles.includes("organizer"))
     return (
       <main className="mx-auto max-w-3xl px-md py-xl">
-        <Card>Organizer access required.</Card>
+        <Card>{t("accessRequired")}</Card>
       </main>
     );
   return (
@@ -43,14 +45,12 @@ export function OrganizerShell({ children }: { children: ReactNode }) {
       <aside className="space-y-lg lg:sticky lg:top-lg">
         <div className="px-sm">
           <p className="text-label font-medium uppercase tracking-widest text-primary">
-            Organizer portal
+            {t("portal")}
           </p>
-          <p className="mt-sm text-label text-text-secondary">
-            Make every event count.
-          </p>
+          <p className="mt-sm text-label text-text-secondary">{t("tagline")}</p>
         </div>
         <nav
-          aria-label="Organizer navigation"
+          aria-label={t("navLabel")}
           className="flex flex-wrap gap-sm lg:flex-col"
         >
           {navigation.map(([href, label]) => (
@@ -63,17 +63,15 @@ export function OrganizerShell({ children }: { children: ReactNode }) {
                 path === href && "bg-primary text-white hover:bg-primary",
               )}
             >
-              {label}
+              {t(`nav.${label}`)}
             </Link>
           ))}
         </nav>
         <Card className="hidden space-y-md lg:block">
           <p className="break-words text-label font-medium">
-            {user?.full_name ?? "Your account"}
+            {user?.full_name ?? t("yourAccount")}
           </p>
-          <p className="text-label text-text-secondary">
-            Sandbox workspace. Sales and fees are simulated.
-          </p>
+          <p className="text-label text-text-secondary">{t("sandbox")}</p>
           <Button
             variant="text"
             loading={busy}
@@ -89,7 +87,7 @@ export function OrganizerShell({ children }: { children: ReactNode }) {
               }
             }}
           >
-            Sign out
+            {t("signOut")}
           </Button>
           {!!error && <ErrorState error={error} />}
         </Card>

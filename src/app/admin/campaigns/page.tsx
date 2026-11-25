@@ -1,12 +1,18 @@
 "use client";
 import { useCallback, useState } from "react";
+import { useTranslations } from "next-intl";
+import { useIntlLocale, useLabel } from "@/i18n/labels";
+import { formatKZT } from "@/lib/money";
 import { Badge, Button, Card, Input } from "@/components/ui";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AdminErrorState, AdminHeader } from "@/components/admin/AdminStates";
 import { useAdmin } from "@/components/admin/AdminShell";
-import { campaignStateLabel, dateLabel, discountLabel } from "@/lib/organizer";
+import { campaignStateLabel, dateLabel } from "@/lib/organizer";
 import { useApiData } from "@/hooks/useApiData";
 export default function AdminCampaigns() {
+  const t = useTranslations("admin.campaigns");
+  const label = useLabel();
+  const locale = useIntlLocale();
   const { api, revision } = useAdmin();
   const [draft, setDraft] = useState("");
   const [query, setQuery] = useState("");
@@ -20,17 +26,16 @@ export default function AdminCampaigns() {
   const resource = useApiData(load);
   const header = (
     <AdminHeader
-      title="Promo activity"
-      description="Review promotional codes, Campaign QR traffic, and redemptions across all events."
+      title={t("title")}
+      description={t("description")}
       action={
         <Button variant="outlined" onClick={resource.retry}>
-          Refresh
+          {t("refresh")}
         </Button>
       }
     />
   );
-  if (resource.loading)
-    return <LoadingSpinner label="Loading promotional activity…" />;
+  if (resource.loading) return <LoadingSpinner label={t("loading")} />;
   if (resource.error || !resource.data)
     return (
       <>
@@ -49,13 +54,13 @@ export default function AdminCampaigns() {
         }}
       >
         <Input
-          label="Search by code or event"
+          label={t("searchLabel")}
           placeholder="CAMPUS20"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
         />
         <Button type="submit" variant="outlined">
-          Search campaigns
+          {t("search")}
         </Button>
       </form>
       <Card className="overflow-hidden p-0">
@@ -63,20 +68,22 @@ export default function AdminCampaigns() {
           <table className="w-full min-w-[820px] text-left text-label">
             <thead className="border-b border-divider bg-background text-text-secondary">
               <tr>
-                {[
-                  "Event",
-                  "Campaign / Code",
-                  "Discount",
-                  "State",
-                  "Link visits",
-                  "Redemptions",
-                ].map((label) => (
+                {(
+                  [
+                    "event",
+                    "campaign",
+                    "discount",
+                    "state",
+                    "visits",
+                    "redemptions",
+                  ] as const
+                ).map((column) => (
                   <th
-                    key={label}
+                    key={column}
                     scope="col"
                     className="px-lg py-md font-medium"
                   >
-                    {label}
+                    {t(`columns.${column}`)}
                   </th>
                 ))}
               </tr>
@@ -94,17 +101,23 @@ export default function AdminCampaigns() {
                       {campaign.code}
                     </p>
                     <p className="mt-xs text-text-secondary">
-                      Created {dateLabel(campaign.created_at)}
+                      {t("created", {
+                        date: dateLabel(campaign.created_at, locale),
+                      })}
                     </p>
                   </td>
-                  <td className="px-lg py-lg">{discountLabel(campaign)}</td>
+                  <td className="px-lg py-lg">
+                    {campaign.discount_type === "percentage"
+                      ? `${campaign.discount_value}%`
+                      : formatKZT(campaign.discount_value)}
+                  </td>
                   <td className="px-lg py-lg">
                     <Badge
                       variant={
                         campaign.state === "active" ? "success" : "neutral"
                       }
                     >
-                      {campaignStateLabel(campaign.state)}
+                      {label(campaignStateLabel(campaign.state))}
                     </Badge>
                   </td>
                   <td className="px-lg py-lg">{campaign.visits}</td>
@@ -117,10 +130,8 @@ export default function AdminCampaigns() {
           </table>
           {!resource.data.length && (
             <div className="space-y-sm p-xl">
-              <h2 className="text-title">No promotional campaigns</h2>
-              <p className="text-label text-text-secondary">
-                Campaigns appear here once organizers create promo codes.
-              </p>
+              <h2 className="text-title">{t("emptyTitle")}</h2>
+              <p className="text-label text-text-secondary">{t("emptyBody")}</p>
             </div>
           )}
         </div>
